@@ -22,5 +22,15 @@ The primary comparison focuses on the **Modern Era (Post-1995)**. Pre-1995 "Lega
 *   **`edward_v20_vs_v22_factors_transposed.png`**: The "Salah Effect" map. Tracks the vertical median score jump for every clinical outcome tag (e.g., +33 for Hepatotoxicity).
 *   **`edward_v20_vs_v22_score_drift.png`**: Scatter plot visualizing the "Biological Penalty" applied to chemically clean failures.
 
+## 🛠 How to Recreate the Analysis
+All necessary scripts and agent definitions are provided in this repository.
+
+1.  **Environment**: Use the `openfe_elite` Conda environment or any environment with `pandas`, `seaborn`, `matplotlib`, `langchain`, and `langchain-google-genai`.
+2.  **API Key**: Export your Google API Key: `export GOOGLE_API_KEY="your_key"`.
+3.  **Run the Audit**: 
+    - The coordinated V22 audit uses `src/run_v22_coordinated_audit.py`. It requires the `Agents/` folder and the input CSVs.
+4.  **Generate Figures**: 
+    - Use `src/generate_v20_vs_v22_coordinated.py` to recreate the ROC, Calibration, and Transposed Factors plots comparing the pure structural engine against the biological insight engine.
+
 ## 🏁 Conclusion
 The transition from V20 to V22 represents the shift from a **Structural Filter** to a **Clinical Success Predictor**. The Edward x Salah partnership is now the absolute reference standard for our autonomous lead optimization pipeline. 🧬🦾
