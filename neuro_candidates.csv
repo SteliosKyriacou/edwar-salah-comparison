@@ -1,0 +1,20 @@
+name,isomeric,target_class,therapeutic_area,trial_phase,company
+Ambroxol,NC1=C(CNC2CCC(O)CC2)C=C(Br)C=C1Br,GCase (GBA1) Chaperone / Lysosomal,GBA-PD (disease modifying),Ph. II Completed,Fondazione I.R.C.C.S.
+Blarcamesine (ANAVEX2-73),"CN(C)CC1CCOC1(C1=CC=CC=C1)C1=CC=CC=C1",sigma-1R Agonist,Alzheimer's Disease,Ph. IIb/III Completed,Anavex Life Sciences
+DNL343,"O=C(COC1=CC=C(Cl)C=C1)NC12CC(C3=NN=C(C4CC(OC(F)(F)F)C4)O3)(C1)C2",eIF2B Activator,ALS (ISR Modulation),Ph. II/III Completed,Denali (HEALY Platform)
+Deferiprone,CC1=C(O)C(=O)C=CN1C,Iron Chelator,Parkinson's Disease,Ph. II Completed,University Hospital Lille
+Masitinib,"CC1=C(NC2=NC(C3=CN=CC=C3)=CS2)C=C(NC(=O)C2=CC=C(CN3CCN(C)CC3)C=C2)C=C1",Tyrosine Kinase Inhibitor (c-Kit),Mild-to-Moderate AD (adjunct),Ph. III Not Yet Recruiting,AB Science
+Neflamapimod (VX-745),"O=C1N=CN2N=C(SC3=C(F)C=C(F)C=C3)C=CC2=C1C1=C(Cl)C=CC=C1Cl",p38a MAPK Inhibitor,Dementia with Lewy Bodies,Ph. II Completed,EIP Pharma / CervoMed
+Nilotinib,"CC1=CN(C2=CC(C(F)(F)F)=CC(NC(=O)C3=CC(NC4=NC=CC(C5=CN=CC=C5)=N4)=C(C)C=C3)=C2)C=N1",BCR-ABL / c-Kit TK Inhibitor,Dementia with Lewy Bodies,Ph. II Recruiting,Georgetown University
+Pridopidine,"CCCN1CCC(C2=CC(S(C)(=O)=O)=CC=C2)CC1",sigma-1R Agonist,ALS,Ph. III Not Yet Recruiting,Prilenia
+Simufilam (PTI-125),"CN1CCC2(CC1)NCC(=O)N2CC1=CC=CC=C1",Filamin A,Mild-to-Moderate AD,Ph. III Completed,Cassava Sciences
+Taurursodiol (AMX0035),"C[C@H](CCC(=O)NCCS(=O)(=O)O)[C@H]1CC[C@H]2[C@@H]3[C@@H](O)C[C@@H]4C[C@H](O)CC[C@]4(C)[C@H]3CC[C@]12C",ER/Mitochondrial Stress Modulation,ALS,Ph. III Active,Amylyx
+Tavapadon,"CC1=C(C2=C(C)C(=O)NC(=O)N2C)C=CC(OC2=C(C(F)(F)F)C=CC=N2)=C1",D1/D5 Partial Agonist,Parkinson's Disease (Motor Fluctuations),Ph. III Completed,AbbVie
+Troriluzole,"CN(CC(=O)NC1=NC2=C(C=C(OC(F)(F)F)C=C2)S1)C(=O)CNC(=O)CN",Glutamatergic Modulation,Spinocerebellar Ataxia,Ph. III Active,Biohaven Pharmaceuticals
+Valiltramiprosate (ALZ-801),"CC(C)[C@H](N)C(=O)NCCCS(=O)(=O)O",Anti-Abeta (Oligomer Inhibitor),Early AD (APOE e4/e4),Ph. III Complete,Alzheon
+Vatiquinone (PTC743),"CC(C)=CCC/C(C)=C/CC/C(C)=C/CC[C@@](C)(O)CCC1=C(C)C(=O)C(C)=C(C)C1=O",Redox/Mitochondrial Pathway Modulator,Friedreich's Ataxia,Ph. III Completed,PTC Therapeutics
+Verdiperstat (BHV-3241),"CC(C)OCCN1C(=S)NC(=O)C2=C1C=CN2",Myeloperoxidase Inhibitor,ALS,Ph. II/III Completed,Biohaven Pharmaceuticals
+Votoplam (PTC518),"CC1(C)CC(N2N=NC3=CC(C4=C(O)C=C(N5N=CC=N5)C=C4)=NN=C32)CC(C)(C)N1",Splicing Modulator (HTT Lowering),Huntington's Disease,Ph. III Not Yet Recruiting,Novartis Pharmaceuticals
+Xanamem,"O=C(C1=CSC(C2=CNN=C2)=C1)N1[C@@H]2CC[C@H]1C[C@](O)(C1=NC=CC=N1)C2",11beta-HSD1 Inhibitor,AD Dementia,Ph. IIb/III Active,Actinogen
+Zervimesine (CT1812),"CC(C)(C)OC1=C(O)C=CC(CCC(C)(C)N2CC3=C(C=C(S(C)(=O)=O)C=C3)C2)=C1",sigma-2R/TMEM97 Antagonist,Early AD,Ph. II Active,Cognition Therapeutics
+anle138b,"BrC1=CC=CC(C2=NNC(C3=CC4=C(C=C3)OCO4)=C2)=C1",alpha-Synuclein Modulator,Parkinson's Disease,Ph. II Completed,MODAG GmbH
