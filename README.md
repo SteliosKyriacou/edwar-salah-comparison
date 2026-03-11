@@ -242,6 +242,42 @@ Validation/
 
 ## Scoring
 
-- **MedChem Score**: 1 (best) to 100 (worst). Derived deterministically from TCSP.
-- **TCSP** (Total Clinical Success Probability): `final_p1 × final_p2 × final_p3`. Raw probability of approval.
+- **Approval Probability** (calibrated): The headline number shown to users. This is the raw TCSP after post-hoc linear calibration (see below).
+- **MedChem Score**: 1 (best) to 100 (worst). Derived deterministically from raw TCSP: `score = 100 × (1 - √(TCSP / 0.40))`.
+- **Raw TCSP** (Total Clinical Success Probability): `final_p1 × final_p2 × final_p3`. Uncalibrated probability product.
 - **P1/P2/P3**: Per-phase probabilities calibrated against industry base rates (P1~0.65, P2~0.30, P3~0.58).
+
+## TCSP Calibration (Ad-Hoc Post-Hoc Correction)
+
+**Problem:** The raw TCSP has excellent discrimination (the ranking is perfectly monotonic) but the probability scale is compressed by ~2.7x. This happens because the three per-phase probabilities are anchored to historical base rates (P1~0.65, P2~0.30, P3~0.58) and then multiplied together. The multiplicative compression means a "perfect" molecule with all anchors gets TCSP = 0.65 × 0.30 × 0.58 = 11.3%, even though its actual approval probability should be much higher.
+
+**Evidence (V25 Global, N=394):**
+
+| TCSP Bin | N | Actual Approval Rate | Predicted (bin midpoint) | Ratio |
+|----------|---|---------------------|--------------------------|-------|
+| 0-2% | 53 | 1.9% | 1.0% | 1.9x |
+| 4-6% | 35 | 14.3% | 5.0% | 2.9x |
+| 8-10% | 31 | 51.6% | 9.0% | 5.7x |
+| 15-20% | 40 | 57.5% | 17.5% | 3.3x |
+| 25-30% | 36 | 80.6% | 27.5% | 2.9x |
+| 30-40% | 36 | 94.4% | 35.0% | 2.7x |
+
+**Fix:** Linear post-hoc calibration (Platt-style) fitted on the V25 Global dataset:
+
+```
+calibrated_probability = min(1.0, max(0.0, 2.67 × TCSP + 0.08))
+```
+
+- **Slope:** 2.67 (compression factor)
+- **Intercept:** 0.08 (baseline offset)
+- **R²:** 0.875
+
+**Important caveats:**
+1. This is an **ad-hoc correction** fitted on the same dataset used for validation. It has not been validated on a held-out set.
+2. The coefficients (2.67, 0.08) are specific to V25 with Gemini 3 Pro Preview. If the LLM model changes, the agent prompts change, or the anchoring base rates change, these coefficients will need refitting.
+3. The correction does **not** change the ranking — it only rescales the probability axis. Discrimination (ROC AUC, PRC AP) is unaffected.
+4. A proper fix would involve either (a) training the agents to output calibrated probabilities directly, or (b) using isotonic regression on a held-out calibration set. This linear approximation is a pragmatic interim solution.
+
+**Where it's applied:**
+- `web/backend/agents.py` — `calibrate_tcsp()` function, coefficients as `CALIB_SLOPE` / `CALIB_INTERCEPT`
+- `src/main.py` — same function and coefficients, output as `"TCSP Calibrated V25"` column

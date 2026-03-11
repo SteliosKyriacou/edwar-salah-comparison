@@ -13,6 +13,14 @@ load_dotenv(os.path.join(BASE, ".env"))
 
 TCSP_CEIL = 0.40
 
+# Post-hoc calibration coefficients (linear Platt scaling).
+# Fitted on V25 Global dataset (N=394): actual_approval_rate = CALIB_SLOPE * TCSP + CALIB_INTERCEPT
+# R²=0.875. The raw TCSP has excellent discrimination (monotonic ranking) but is
+# compressed ~2.7x due to multiplicative anchoring (P1~0.65 × P2~0.30 × P3~0.58).
+# This rescaling corrects the probability scale without changing the ranking.
+CALIB_SLOPE = 2.67
+CALIB_INTERCEPT = 0.08
+
 
 def _load_prompt(name):
     path = os.path.join(BASE, "Agents", name, "INSTRUCTIONS.md")
@@ -47,6 +55,11 @@ def norm_prob(p):
     if p > 1:
         p = p / 100
     return max(0.0, min(1.0, p))
+
+
+def calibrate_tcsp(tcsp):
+    """Post-hoc linear calibration: maps compressed TCSP to calibrated probability."""
+    return max(0.0, min(1.0, CALIB_SLOPE * tcsp + CALIB_INTERCEPT))
 
 
 def tcsp_to_score(tcsp):
@@ -154,14 +167,17 @@ def run_pipeline(smiles, target, indication, auxiliary=""):
     fp1 = norm_prob(pass2_data.get("final_p1", 0.5))
     fp2 = norm_prob(pass2_data.get("final_p2", 0.3))
     fp3 = norm_prob(pass2_data.get("final_p3", 0.5))
-    tcsp = round(fp1 * fp2 * fp3, 6)
-    score = tcsp_to_score(tcsp)
+    tcsp_raw = round(fp1 * fp2 * fp3, 6)
+    tcsp_calibrated = round(calibrate_tcsp(tcsp_raw), 4)
+    score = tcsp_to_score(tcsp_raw)
 
     return {
         "overview": {
             "medchem_score": score,
-            "tcsp": tcsp,
-            "tcsp_pct": round(tcsp * 100, 2),
+            "tcsp_raw": tcsp_raw,
+            "tcsp_raw_pct": round(tcsp_raw * 100, 2),
+            "tcsp_calibrated": tcsp_calibrated,
+            "tcsp_calibrated_pct": round(tcsp_calibrated * 100, 1),
             "final_p1": fp1,
             "final_p2": fp2,
             "final_p3": fp3,

@@ -36,6 +36,15 @@ llm = ChatGoogleGenerativeAI(model="gemini-3-pro-preview", temperature=0.0)
 
 TCSP_CEIL = 0.40  # Practical TCSP ceiling for score mapping
 
+# Post-hoc calibration coefficients (linear Platt scaling, fitted on V25 Global N=394)
+CALIB_SLOPE = 2.67
+CALIB_INTERCEPT = 0.08
+
+
+def calibrate_tcsp(tcsp):
+    """Post-hoc linear calibration: maps compressed TCSP to calibrated probability."""
+    return max(0.0, min(1.0, CALIB_SLOPE * tcsp + CALIB_INTERCEPT))
+
 
 def parse_json(content):
     if isinstance(content, list):
@@ -163,6 +172,7 @@ def run_v25_pipeline(smiles, target, indication):
     fp2 = norm_prob(pass2_data.get("final_p2", 0.3))
     fp3 = norm_prob(pass2_data.get("final_p3", 0.5))
     tcsp = round(fp1 * fp2 * fp3, 6)
+    tcsp_calibrated = round(calibrate_tcsp(tcsp), 4)
     edward_score = tcsp_to_score(tcsp)
 
     return {
@@ -184,6 +194,7 @@ def run_v25_pipeline(smiles, target, indication):
         "final_p3": fp3,
         "final_p3_rationale": pass2_data.get("final_p3_rationale", ""),
         "tcsp": tcsp,
+        "tcsp_calibrated": tcsp_calibrated,
         # Biological-Rationalist
         "salah_verdict": salah_data.get("salah_verdict", ""),
         "biological_rationale": salah_data.get("biological_rationale", ""),
@@ -215,7 +226,7 @@ def run_v25_pipeline(smiles, target, indication):
     }
 
 
-BATCH_SIZE = 10
+BATCH_SIZE = 25
 
 
 def process_one(i, row):
@@ -288,6 +299,7 @@ def main():
         "final_p2": "Final P2 V25", "final_p2_rationale": "Final P2 Rationale V25",
         "final_p3": "Final P3 V25", "final_p3_rationale": "Final P3 Rationale V25",
         "tcsp": "TCSP V25",
+        "tcsp_calibrated": "TCSP Calibrated V25",
         "salah_verdict": "Bio Verdict V25",
         "biological_rationale": "Biological Rationale V25",
         "mechanism_validation": "Mechanism Validation V25",

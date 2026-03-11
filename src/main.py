@@ -22,6 +22,12 @@ load_dotenv(os.path.join(BASE, ".env"))
 
 TCSP_CEIL = 0.40
 
+# Post-hoc calibration coefficients (linear Platt scaling).
+# Fitted on V25 Global dataset (N=394): actual_approval_rate = CALIB_SLOPE * TCSP + CALIB_INTERCEPT
+# R²=0.875. See README.md for full explanation.
+CALIB_SLOPE = 2.67
+CALIB_INTERCEPT = 0.08
+
 
 def load_agent_prompt(name):
     path = os.path.join(BASE, "Agents", name, "INSTRUCTIONS.md")
@@ -55,6 +61,11 @@ def norm_prob(p):
     if p > 1:
         p = p / 100
     return max(0.0, min(1.0, p))
+
+
+def calibrate_tcsp(tcsp):
+    """Post-hoc linear calibration: maps compressed TCSP to calibrated probability."""
+    return max(0.0, min(1.0, CALIB_SLOPE * tcsp + CALIB_INTERCEPT))
 
 
 def tcsp_to_score(tcsp):
@@ -156,6 +167,7 @@ def run_v25_pipeline(smiles, target, indication):
     fp2 = norm_prob(pass2_data.get("final_p2", 0.3))
     fp3 = norm_prob(pass2_data.get("final_p3", 0.5))
     tcsp = round(fp1 * fp2 * fp3, 6)
+    tcsp_cal = round(calibrate_tcsp(tcsp), 4)
     edward_score = tcsp_to_score(tcsp)
 
     return {
@@ -171,6 +183,7 @@ def run_v25_pipeline(smiles, target, indication):
         "Final P2 V25": fp2, "Final P2 Rationale V25": pass2_data.get("final_p2_rationale", ""),
         "Final P3 V25": fp3, "Final P3 Rationale V25": pass2_data.get("final_p3_rationale", ""),
         "TCSP V25": tcsp,
+        "TCSP Calibrated V25": tcsp_cal,
         "Bio Verdict V25": salah_data.get("salah_verdict", ""),
         "Biological Rationale V25": salah_data.get("biological_rationale", ""),
         "Mechanism Validation V25": salah_data.get("mechanism_validation", ""),
