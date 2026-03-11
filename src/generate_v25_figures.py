@@ -1,193 +1,109 @@
-"""Generate V20 vs V22 vs V23 vs V24 vs V25 figures for all sets.
-Includes both Score-based and raw TCSP curves.
+"""Generate V25 figures for the Global dataset (N=394).
+Score-based and raw TCSP: ROC, PRC, Calibration.
 """
 
 import pandas as pd
+import re
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 import os
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
+GLOBAL_FILE = os.path.join(BASE, "Validation", "global", "SM_V25_GLOBAL.csv")
+OUT_DIR = os.path.join(BASE, "Validation", "global")
 
 
-def plot_roc_dual(score_datasets, tcsp_dataset, y_true, title, out_path):
-    """2-panel ROC: Score-based (left) + Raw TCSP overlay (right)."""
+def extract_year(val):
+    if pd.isna(val):
+        return None
+    m = re.search(r'(\d{4})', str(val))
+    return int(m.group(1)) if m else None
+
+
+def plot_roc(s25, tcsp25, y_true, n, n_pos, title, out_path):
+    """2-panel ROC: Score (left) + Raw TCSP (right)."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7))
     fig.patch.set_facecolor("white")
 
-    # Panel 1: Score-based ROC (all versions)
-    for scores, _, label, color, lw, ls in score_datasets:
-        valid = ~scores.isna()
-        pred = 101 - scores[valid]
-        fpr, tpr, _ = roc_curve(y_true[valid], pred)
-        roc_auc = auc(fpr, tpr)
-        ax1.plot(fpr, tpr, color=color, lw=lw, ls=ls,
-                 label=f"{label}  AUC: {roc_auc:.3f}")
+    valid = ~s25.isna()
+    pred = 101 - s25[valid]
+    fpr, tpr, _ = roc_curve(y_true[valid], pred)
+    roc_auc = auc(fpr, tpr)
+    ax1.plot(fpr, tpr, color="#9B59B6", lw=2.5,
+             label=f"V25 MedChem Score  AUC: {roc_auc:.3f}")
     ax1.plot([0, 1], [0, 1], color="black", lw=1, ls=":")
     ax1.set_xlabel("False Positive Rate", fontsize=12)
     ax1.set_ylabel("True Positive Rate", fontsize=12)
     ax1.set_title("ROC — MedChem Score", fontsize=13, fontweight="bold")
-    ax1.legend(loc="lower right", fontsize=9, framealpha=0.9)
+    ax1.legend(loc="lower right", fontsize=10, framealpha=0.9)
     ax1.grid(True, alpha=0.2)
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.02])
 
-    # Panel 2: V24 Score vs V25 Score vs V25 Raw TCSP
-    if tcsp_dataset is not None:
-        tcsp_scores, _, tcsp_label, tcsp_color = tcsp_dataset
-        # V24 score for reference
-        s24 = score_datasets[-2]  # V24 is second to last
-        valid24 = ~s24[0].isna()
-        pred24 = 101 - s24[0][valid24]
-        fpr24, tpr24, _ = roc_curve(y_true[valid24], pred24)
-        auc24 = auc(fpr24, tpr24)
-        ax2.plot(fpr24, tpr24, color=s24[3], lw=1.5, ls="--",
-                 label=f"V24 Score  AUC: {auc24:.3f}")
-        # V25 score
-        s25 = score_datasets[-1]  # V25 is last
-        valid25 = ~s25[0].isna()
-        pred25 = 101 - s25[0][valid25]
-        fpr25, tpr25, _ = roc_curve(y_true[valid25], pred25)
-        auc25 = auc(fpr25, tpr25)
-        ax2.plot(fpr25, tpr25, color=s25[3], lw=2.0, ls="-",
-                 label=f"V25 Score  AUC: {auc25:.3f}")
-        # Raw TCSP
-        valid_tcsp = ~tcsp_scores.isna()
-        fpr_t, tpr_t, _ = roc_curve(y_true[valid_tcsp], tcsp_scores[valid_tcsp])
-        auc_t = auc(fpr_t, tpr_t)
-        ax2.plot(fpr_t, tpr_t, color=tcsp_color, lw=2.5, ls="-.",
-                 label=f"{tcsp_label}  AUC: {auc_t:.3f}")
+    valid_t = ~tcsp25.isna()
+    fpr_t, tpr_t, _ = roc_curve(y_true[valid_t], tcsp25[valid_t])
+    auc_t = auc(fpr_t, tpr_t)
+    ax2.plot(fpr_t, tpr_t, color="#FF8C00", lw=2.5,
+             label=f"V25 Raw TCSP  AUC: {auc_t:.3f}")
     ax2.plot([0, 1], [0, 1], color="black", lw=1, ls=":")
     ax2.set_xlabel("False Positive Rate", fontsize=12)
     ax2.set_ylabel("True Positive Rate", fontsize=12)
-    ax2.set_title("ROC — V24 vs V25 Score vs Raw TCSP", fontsize=13, fontweight="bold")
+    ax2.set_title("ROC — Raw TCSP", fontsize=13, fontweight="bold")
     ax2.legend(loc="lower right", fontsize=10, framealpha=0.9)
     ax2.grid(True, alpha=0.2)
     ax2.set_xlim([0, 1]); ax2.set_ylim([0, 1.02])
 
-    plt.suptitle(title, fontsize=14, fontweight="bold")
+    plt.suptitle(f"{title} (N={n}, {n_pos} approved)", fontsize=14, fontweight="bold")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     fig.savefig(out_path, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"Saved: {out_path}")
 
 
-def plot_prc_dual(score_datasets, tcsp_dataset, y_true, title, out_path):
-    """2-panel PRC: Score-based (left) + Raw TCSP overlay (right)."""
+def plot_prc(s25, tcsp25, y_true, n, n_pos, title, out_path):
+    """2-panel PRC: Score (left) + Raw TCSP (right)."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7))
     fig.patch.set_facecolor("white")
-    n = len(y_true)
-    baseline = y_true.sum() / n
+    baseline = n_pos / n
 
-    # Panel 1: Score-based PRC (all versions)
-    for scores, _, label, color, lw, ls in score_datasets:
-        valid = ~scores.isna()
-        pred = 1 - scores[valid] / 100
-        prec, rec, _ = precision_recall_curve(y_true[valid], pred)
-        ap = average_precision_score(y_true[valid], pred)
-        ax1.plot(rec, prec, color=color, lw=lw, ls=ls,
-                 label=f"{label}  AP: {ap:.3f}")
+    valid = ~s25.isna()
+    pred = 1 - s25[valid] / 100
+    prec, rec, _ = precision_recall_curve(y_true[valid], pred)
+    ap = average_precision_score(y_true[valid], pred)
+    ax1.plot(rec, prec, color="#9B59B6", lw=2.5,
+             label=f"V25 MedChem Score  AP: {ap:.3f}")
     ax1.axhline(y=baseline, color="#555555", linestyle=":", linewidth=1,
                 label=f"Random ({baseline:.2f})")
     ax1.set_xlabel("Recall", fontsize=12)
     ax1.set_ylabel("Precision", fontsize=12)
     ax1.set_title("PRC — MedChem Score", fontsize=13, fontweight="bold")
-    ax1.legend(loc="upper right", fontsize=9, framealpha=0.9)
+    ax1.legend(loc="upper right", fontsize=10, framealpha=0.9)
     ax1.grid(True, alpha=0.2)
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.05])
 
-    # Panel 2: V24 Score vs V25 Score vs V25 Raw TCSP
-    if tcsp_dataset is not None:
-        tcsp_scores, _, tcsp_label, tcsp_color = tcsp_dataset
-        s24 = score_datasets[-2]
-        valid24 = ~s24[0].isna()
-        pred24 = 1 - s24[0][valid24] / 100
-        prec24, rec24, _ = precision_recall_curve(y_true[valid24], pred24)
-        ap24 = average_precision_score(y_true[valid24], pred24)
-        ax2.plot(rec24, prec24, color=s24[3], lw=1.5, ls="--",
-                 label=f"V24 Score  AP: {ap24:.3f}")
-
-        s25 = score_datasets[-1]
-        valid25 = ~s25[0].isna()
-        pred25 = 1 - s25[0][valid25] / 100
-        prec25, rec25, _ = precision_recall_curve(y_true[valid25], pred25)
-        ap25 = average_precision_score(y_true[valid25], pred25)
-        ax2.plot(rec25, prec25, color=s25[3], lw=2.0, ls="-",
-                 label=f"V25 Score  AP: {ap25:.3f}")
-
-        valid_tcsp = ~tcsp_scores.isna()
-        prec_t, rec_t, _ = precision_recall_curve(y_true[valid_tcsp], tcsp_scores[valid_tcsp])
-        ap_t = average_precision_score(y_true[valid_tcsp], tcsp_scores[valid_tcsp])
-        ax2.plot(rec_t, prec_t, color=tcsp_color, lw=2.5, ls="-.",
-                 label=f"{tcsp_label}  AP: {ap_t:.3f}")
+    valid_t = ~tcsp25.isna()
+    prec_t, rec_t, _ = precision_recall_curve(y_true[valid_t], tcsp25[valid_t])
+    ap_t = average_precision_score(y_true[valid_t], tcsp25[valid_t])
+    ax2.plot(rec_t, prec_t, color="#FF8C00", lw=2.5,
+             label=f"V25 Raw TCSP  AP: {ap_t:.3f}")
     ax2.axhline(y=baseline, color="#555555", linestyle=":", linewidth=1,
                 label=f"Random ({baseline:.2f})")
     ax2.set_xlabel("Recall", fontsize=12)
     ax2.set_ylabel("Precision", fontsize=12)
-    ax2.set_title("PRC — V24 vs V25 Score vs Raw TCSP", fontsize=13, fontweight="bold")
+    ax2.set_title("PRC — Raw TCSP", fontsize=13, fontweight="bold")
     ax2.legend(loc="upper right", fontsize=10, framealpha=0.9)
     ax2.grid(True, alpha=0.2)
     ax2.set_xlim([0, 1]); ax2.set_ylim([0, 1.05])
 
-    plt.suptitle(title, fontsize=14, fontweight="bold")
+    plt.suptitle(f"{title} (N={n}, {n_pos} approved)", fontsize=14, fontweight="bold")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     fig.savefig(out_path, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"Saved: {out_path}")
 
 
-def plot_calibration(score_list, y_true, outcome, title, out_path):
-    n_panels = len(score_list)
-    fig, axes = plt.subplots(1, n_panels, figsize=(6 * n_panels, 7), sharey=True)
-    if n_panels == 1:
-        axes = [axes]
-
-    for ax, (scores, panel_title, bins, bin_labels, xlabel) in zip(axes, score_list):
-        df_temp = pd.DataFrame({"score": scores, "outcome": outcome})
-        df_temp["bin"] = pd.cut(df_temp["score"], bins=bins, labels=bin_labels, include_lowest=True)
-        pivot = pd.crosstab(df_temp["bin"], df_temp["outcome"], normalize="index")
-        for c in ["Approved", "Liability"]:
-            if c not in pivot.columns:
-                pivot[c] = 0
-        pivot = pivot[["Approved", "Liability"]]
-        pivot.plot(kind="bar", stacked=True, ax=ax,
-                   color=["#B7E4C7", "#FF7F50"], edgecolor="black", width=0.8)
-        ax.set_title(panel_title, fontsize=12, fontweight="bold")
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel("Proportion", fontsize=10)
-        ax.tick_params(axis="x", rotation=45)
-        ax.legend(loc="upper left", fontsize=8)
-
-    n = len(y_true)
-    plt.suptitle(f"{title} (N={n})", fontsize=14, fontweight="bold")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    fig.savefig(out_path, dpi=300, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"Saved: {out_path}")
-
-
-def process_set(set_name, dir_path, v20_file, v22_file, v23_file, v24_file, v25_file,
-                cat_col="category", cat_val="approved", tag_col="MedChem_Descriptor_Tag"):
-    print(f"\n{'='*60}")
-    print(f"  {set_name}")
-    print(f"{'='*60}")
-
-    v20 = pd.read_csv(v20_file)
-    v22 = pd.read_csv(v22_file)
-    v23 = pd.read_csv(v23_file)
-    v24 = pd.read_csv(v24_file)
-    v25 = pd.read_csv(v25_file)
-
-    s20 = pd.to_numeric(v20["MedChem Score V20"], errors="coerce")
-    s22 = pd.to_numeric(v22["MedChem Score V22"], errors="coerce")
-    s23 = pd.to_numeric(v23["MedChem Score V23"], errors="coerce")
-    s24 = pd.to_numeric(v24["MedChem Score V24"], errors="coerce")
-    s25 = pd.to_numeric(v25["MedChem Score V25"], errors="coerce")
-    tcsp25 = pd.to_numeric(v25["TCSP V25"], errors="coerce")
-    y_true = (v22[cat_col] == cat_val).astype(int)
-
-    n = len(y_true)
-    n_pos = y_true.sum()
-    print(f"N={n}, Approved={n_pos}, Failed={n - n_pos}")
+def plot_calibration(s25, tcsp25, y_true, outcome, n, title, out_path):
+    """2-panel calibration: Score bins (left) + TCSP bins (right)."""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7), sharey=True)
 
     score_bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
     score_labels = ["0-10", "10-20", "20-30", "30-40", "40-50",
@@ -196,68 +112,99 @@ def process_set(set_name, dir_path, v20_file, v22_file, v23_file, v24_file, v25_
     tcsp_labels = ["0-2", "2-4", "4-6", "6-8", "8-10",
                    "10-15", "15-20", "20-25", "25-30", "30-40"]
 
-    versions = [
-        (s20, y_true, "V20 (Edward Only)", "#B0B0B0", 1.0, "--"),
-        (s22, y_true, "V22 (MedChem + Bio)", "#4A90E2", 1.0, "--"),
-        (s23, y_true, "V23 (Calibrated)", "#2ECC71", 1.5, "--"),
-        (s24, y_true, "V24 (Context-Aware)", "#E74C3C", 2.0, "-"),
-        (s25, y_true, "V25 (Multi-Agent)", "#9B59B6", 2.5, "-"),
-    ]
+    def cal_panel(ax, values, bins, labels, panel_title, xlabel):
+        df_temp = pd.DataFrame({"val": values, "outcome": outcome})
+        df_temp["bin"] = pd.cut(df_temp["val"], bins=bins, labels=labels, include_lowest=True)
+        ct = pd.crosstab(df_temp["bin"], df_temp["outcome"])
+        for c in ["Approved", "Liability"]:
+            if c not in ct.columns:
+                ct[c] = 0
+        ct = ct[["Approved", "Liability"]]
+        ct_norm = ct.div(ct.sum(axis=1), axis=0).fillna(0)
+        ct_norm.plot(kind="bar", stacked=True, ax=ax,
+                     color=["#B7E4C7", "#FF7F50"], edgecolor="black", width=0.8)
+        for i, (idx, row) in enumerate(ct.iterrows()):
+            total = row["Approved"] + row["Liability"]
+            if total > 0:
+                ax.text(i, 1.02, f"n={int(total)}", ha="center", va="bottom",
+                        fontsize=8, fontweight="bold")
+        ax.set_title(panel_title, fontsize=13, fontweight="bold")
+        ax.set_xlabel(xlabel, fontsize=11)
+        ax.set_ylabel("Proportion", fontsize=11)
+        ax.tick_params(axis="x", rotation=45)
+        ax.legend(loc="upper left", fontsize=9)
+        ax.set_ylim(0, 1.15)
 
-    tcsp_ds = (tcsp25, y_true, "V25 Raw TCSP", "#FF8C00")
+    cal_panel(ax1, s25, score_bins, score_labels,
+              "V25 — MedChem Score", "MedChem Score Bin")
+    cal_panel(ax2, tcsp25 * 100, tcsp_bins, tcsp_labels,
+              "V25 — Raw TCSP (%)", "TCSP (%) Bin")
 
-    # ROC (2-panel)
-    plot_roc_dual(versions, tcsp_ds, y_true,
-                  f"ROC: V20→V25 — {set_name} (N={n}, {n_pos} approved)",
-                  os.path.join(dir_path, "sm_v20_v22_v23_v24_v25_roc.png"))
+    plt.suptitle(f"{title} (N={n})", fontsize=15, fontweight="bold")
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    fig.savefig(out_path, dpi=300, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    print(f"Saved: {out_path}")
 
-    # PRC (2-panel)
-    plot_prc_dual(versions, tcsp_ds, y_true,
-                  f"PRC: V20→V25 — {set_name} (N={n}, {n_pos} approved)",
-                  os.path.join(dir_path, "sm_v20_v22_v23_v24_v25_prc.png"))
 
-    # Calibration (6-panel: V20-V25 score + V25 raw TCSP)
-    outcome = v22[tag_col].apply(
+def process_set(set_name, df, out_dir, cat_col="category", cat_val="approved",
+                tag_col="MedChem_Descriptor_Tag"):
+    print(f"\n{'='*60}")
+    print(f"  {set_name}")
+    print(f"{'='*60}")
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    s25 = pd.to_numeric(df["MedChem Score V25"], errors="coerce")
+    tcsp25 = pd.to_numeric(df["TCSP V25"], errors="coerce")
+    y_true = (df[cat_col] == cat_val).astype(int)
+
+    n = len(y_true)
+    n_pos = y_true.sum()
+    print(f"N={n}, Approved={n_pos}, Failed={n - n_pos}")
+
+    app_mask = y_true == 1
+    fail_mask = y_true == 0
+    print(f"Score: Approved median={s25[app_mask].median():.0f}, Failed median={s25[fail_mask].median():.0f}")
+    print(f"TCSP:  Approved median={tcsp25[app_mask].median():.3f}, Failed median={tcsp25[fail_mask].median():.3f}")
+
+    plot_roc(s25, tcsp25, y_true, n, n_pos,
+             f"ROC: V25 — {set_name}",
+             os.path.join(out_dir, "v25_roc.png"))
+
+    plot_prc(s25, tcsp25, y_true, n, n_pos,
+             f"PRC: V25 — {set_name}",
+             os.path.join(out_dir, "v25_prc.png"))
+
+    outcome = df[tag_col].apply(
         lambda x: "Approved" if "approved_control" in str(x).lower() else "Liability"
     )
-    plot_calibration(
-        [
-            (s20, "V20", score_bins, score_labels, "Score Bin"),
-            (s22, "V22", score_bins, score_labels, "Score Bin"),
-            (s23, "V23", score_bins, score_labels, "Score Bin"),
-            (s24, "V24", score_bins, score_labels, "Score Bin"),
-            (s25, "V25", score_bins, score_labels, "Score Bin"),
-            (tcsp25 * 100, "V25 Raw TCSP", tcsp_bins, tcsp_labels, "TCSP (%) Bin"),
-        ],
-        y_true, outcome,
-        f"Calibration: V20→V25 — {set_name}",
-        os.path.join(dir_path, "sm_v20_v22_v23_v24_v25_calibration.png"))
+    plot_calibration(s25, tcsp25, y_true, outcome, n,
+                     f"Calibration: V25 — {set_name}",
+                     os.path.join(out_dir, "v25_calibration.png"))
 
 
 def main():
-    process_set("Modern",
-                os.path.join(BASE, "Validation", "modern"),
-                os.path.join(BASE, "Validation", "modern", "SM_V20_EDWARD_ONLY.csv"),
-                os.path.join(BASE, "Validation", "modern", "SM_V22_EDWARD_SALAH.csv"),
-                os.path.join(BASE, "Validation", "modern", "SM_V23_EDWARD_SALAH.csv"),
-                os.path.join(BASE, "Validation", "modern", "SM_V24_EDWARD_SALAH.csv"),
-                os.path.join(BASE, "Validation", "modern", "SM_V25_EDWARD_SALAH.csv"))
+    df = pd.read_csv(GLOBAL_FILE)
 
-    process_set("Legacy",
-                os.path.join(BASE, "Validation", "legacy"),
-                os.path.join(BASE, "Validation", "legacy", "SM_V20_EDWARD_ONLY_LEGACY.csv"),
-                os.path.join(BASE, "Validation", "legacy", "SM_V22_EDWARD_SALAH_LEGACY.csv"),
-                os.path.join(BASE, "Validation", "legacy", "SM_V23_EDWARD_SALAH_LEGACY.csv"),
-                os.path.join(BASE, "Validation", "legacy", "SM_V24_EDWARD_SALAH_LEGACY.csv"),
-                os.path.join(BASE, "Validation", "legacy", "SM_V25_EDWARD_SALAH_LEGACY.csv"))
+    # Add year column for splitting
+    df['year_clean'] = df['year-approved'].apply(extract_year).fillna(
+        df['year_stopped'].apply(extract_year)
+    )
 
-    process_set("Global",
-                os.path.join(BASE, "Validation", "global"),
-                os.path.join(BASE, "Validation", "global", "SM_V20_EDWARD_ONLY_GLOBAL.csv"),
-                os.path.join(BASE, "Validation", "global", "SM_V22_EDWARD_SALAH_GLOBAL.csv"),
-                os.path.join(BASE, "Validation", "global", "SM_V23_EDWARD_SALAH_GLOBAL.csv"),
-                os.path.join(BASE, "Validation", "global", "SM_V24_EDWARD_SALAH_GLOBAL.csv"),
-                os.path.join(BASE, "Validation", "global", "SM_V25_EDWARD_SALAH_GLOBAL.csv"))
+    # Global (all)
+    process_set("Global", df,
+                os.path.join(OUT_DIR))
+
+    # Modern (>=1999)
+    modern = df[df['year_clean'] >= 1999].reset_index(drop=True)
+    process_set("Modern", modern,
+                os.path.join(BASE, "Validation", "modern"))
+
+    # Legacy (<1999)
+    legacy = df[df['year_clean'] < 1999].reset_index(drop=True)
+    process_set("Legacy", legacy,
+                os.path.join(BASE, "Validation", "legacy"))
 
     print("\nDone!")
 

@@ -215,6 +215,29 @@ def run_v25_pipeline(smiles, target, indication):
     }
 
 
+BATCH_SIZE = 10
+
+
+def process_one(i, row):
+    """Run V25 pipeline for a single molecule. Returns (index, result_dict)."""
+    smiles = str(row['isomeric'])
+    target = str(row['target_class'])
+    indication = str(row['therapeutic_area'])
+    name = str(row['compound'])
+
+    try:
+        result = run_v25_pipeline(smiles, target, indication)
+        tcsp = result.get('tcsp', 0)
+        tcsp_pct = tcsp * 100 if isinstance(tcsp, float) and tcsp <= 1 else tcsp
+        print(f"  [{i+1}] {name}  Score={result.get('edward_score', 'N/A')}  Bio={result.get('salah_verdict', 'N/A')}  Toxi={result.get('toxi_verdict', 'N/A')}  Pharma={result.get('pharma_verdict', 'N/A')}  TCSP={tcsp_pct:.2f}%", flush=True)
+        return (i, result)
+    except Exception as e:
+        print(f"  [{i+1}] {name}  ERROR: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return (i, {"error": str(e)})
+
+
 def main():
     df = pd.read_csv(INPUT_FILE)
 
@@ -223,36 +246,29 @@ def main():
         with open(PROGRESS_FILE, 'r') as f:
             start_index = sum(1 for line in f)
 
-    print(f"V25 Multi-Agent Pipeline — 2025 drugs (n={len(df)}), resuming from {start_index}", flush=True)
+    remaining = len(df) - start_index
+    print(f"V25 Multi-Agent Pipeline — 2025 drugs (n={len(df)}), resuming from {start_index}, batch_size={BATCH_SIZE}", flush=True)
+    print(f"  {remaining} molecules remaining, ~{remaining // BATCH_SIZE + 1} batches", flush=True)
 
-    for i in range(start_index, len(df)):
-        row = df.iloc[i]
-        smiles = str(row['isomeric'])
-        target = str(row['target_class'])
-        indication = str(row['therapeutic_area'])
-        name = str(row['compound'])
+    for batch_start in range(start_index, len(df), BATCH_SIZE):
+        batch_end = min(batch_start + BATCH_SIZE, len(df))
+        batch_rows = [(i, df.iloc[i]) for i in range(batch_start, batch_end)]
 
-        print(f"[{i+1}/{len(df)}] {name}...", flush=True)
+        print(f"\n--- Batch [{batch_start+1}-{batch_end}] / {len(df)} ---", flush=True)
 
-        try:
-            result = run_v25_pipeline(smiles, target, indication)
-            with open(PROGRESS_FILE, "a") as f:
-                f.write(json.dumps(result) + "\n")
-            score = result.get('edward_score', 'N/A')
-            verdict = result.get('salah_verdict', 'N/A')
-            toxi_v = result.get('toxi_verdict', 'N/A')
-            pharma_v = result.get('pharma_verdict', 'N/A')
-            tcsp = result.get('tcsp', 0)
-            tcsp_pct = tcsp * 100 if isinstance(tcsp, float) and tcsp <= 1 else tcsp
-            print(f"    Score={score}  Bio={verdict}  Toxi={toxi_v}  Pharma={pharma_v}  TCSP={tcsp_pct:.2f}%", flush=True)
-        except Exception as e:
-            print(f"    ERROR: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
-            with open(PROGRESS_FILE, "a") as f:
-                f.write(json.dumps({"error": str(e)}) + "\n")
+        with ThreadPoolExecutor(max_workers=BATCH_SIZE) as batch_executor:
+            futures = {
+                batch_executor.submit(process_one, i, row): i
+                for i, row in batch_rows
+            }
+            batch_results = {}
+            for fut in futures:
+                idx, result = fut.result()
+                batch_results[idx] = result
 
-        time.sleep(1)
+        with open(PROGRESS_FILE, "a") as f:
+            for i in range(batch_start, batch_end):
+                f.write(json.dumps(batch_results[i]) + "\n")
 
     # Finalize CSV
     results_list = []

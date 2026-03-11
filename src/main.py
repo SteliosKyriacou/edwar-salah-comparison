@@ -209,6 +209,7 @@ def main():
     parser.add_argument("--indication", required=True, help="Column name containing indication/therapeutic area")
     parser.add_argument("-o", "--output", help="Output CSV path (default: <input>_V25.csv)")
     parser.add_argument("--name", help="Column name for compound name (for progress display)")
+    parser.add_argument("--batch-size", type=int, default=10, help="Molecules to process concurrently (default: 10)")
     args = parser.parse_args()
 
     input_path = os.path.abspath(args.input)
@@ -230,45 +231,65 @@ def main():
         output_path = f"{base}_V25{ext}"
 
     progress_path = output_path.replace(".csv", "_progress.jsonl")
+    batch_size = args.batch_size
+    smiles_col = args.smiles
+    target_col = args.target
+    indication_col = args.indication
+    name_col = args.name
 
     start_index = 0
     if os.path.exists(progress_path):
         with open(progress_path, 'r') as f:
             start_index = sum(1 for line in f)
 
-    print(f"V25 Multi-Agent Pipeline (n={len(df)}), resuming from {start_index}", flush=True)
+    remaining = len(df) - start_index
+    print(f"V25 Multi-Agent Pipeline (n={len(df)}), resuming from {start_index}, batch_size={batch_size}", flush=True)
     print(f"  Input:  {input_path}", flush=True)
     print(f"  Output: {output_path}", flush=True)
-    print(f"  Columns: SMILES={args.smiles}, Target={args.target}, Indication={args.indication}", flush=True)
+    print(f"  Columns: SMILES={smiles_col}, Target={target_col}, Indication={indication_col}", flush=True)
+    print(f"  {remaining} molecules remaining, ~{remaining // batch_size + 1} batches", flush=True)
 
-    for i in range(start_index, len(df)):
-        row = df.iloc[i]
-        smiles = str(row[args.smiles])
-        target = str(row[args.target])
-        indication = str(row[args.indication])
-        name = str(row[args.name]) if args.name and args.name in df.columns else f"row {i}"
-
-        print(f"[{i+1}/{len(df)}] {name}...", flush=True)
+    def process_one(i, row):
+        smiles = str(row[smiles_col])
+        target = str(row[target_col])
+        indication = str(row[indication_col])
+        name = str(row[name_col]) if name_col and name_col in df.columns else f"row {i}"
 
         try:
             result = run_v25_pipeline(smiles, target, indication)
-            with open(progress_path, "a") as f:
-                f.write(json.dumps(result) + "\n")
             score = result.get("MedChem Score V25", "N/A")
             bio = result.get("Bio Verdict V25", "N/A")
             toxi = result.get("Toxi Verdict V25", "N/A")
             pharma = result.get("Pharma Verdict V25", "N/A")
             tcsp = result.get("TCSP V25", 0)
             tcsp_pct = tcsp * 100 if isinstance(tcsp, float) and tcsp <= 1 else tcsp
-            print(f"    Score={score}  Bio={bio}  Toxi={toxi}  Pharma={pharma}  TCSP={tcsp_pct:.2f}%", flush=True)
+            print(f"  [{i+1}] {name}  Score={score}  Bio={bio}  Toxi={toxi}  Pharma={pharma}  TCSP={tcsp_pct:.2f}%", flush=True)
+            return (i, result)
         except Exception as e:
-            print(f"    ERROR: {e}", flush=True)
+            print(f"  [{i+1}] {name}  ERROR: {e}", flush=True)
             import traceback
             traceback.print_exc()
-            with open(progress_path, "a") as f:
-                f.write(json.dumps({"error": str(e)}) + "\n")
+            return (i, {"error": str(e)})
 
-        time.sleep(1)
+    for batch_start in range(start_index, len(df), batch_size):
+        batch_end = min(batch_start + batch_size, len(df))
+        batch_rows = [(i, df.iloc[i]) for i in range(batch_start, batch_end)]
+
+        print(f"\n--- Batch [{batch_start+1}-{batch_end}] / {len(df)} ---", flush=True)
+
+        with ThreadPoolExecutor(max_workers=batch_size) as batch_executor:
+            futures = {
+                batch_executor.submit(process_one, i, row): i
+                for i, row in batch_rows
+            }
+            batch_results = {}
+            for fut in futures:
+                idx, result = fut.result()
+                batch_results[idx] = result
+
+        with open(progress_path, "a") as f:
+            for i in range(batch_start, batch_end):
+                f.write(json.dumps(batch_results[i]) + "\n")
 
     results_list = []
     with open(progress_path, "r") as f:

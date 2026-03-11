@@ -1,24 +1,20 @@
-"""Generate V24 vs V25 comparison figures for 2025 drug data.
-Includes both Score-based and raw TCSP curves side by side.
+"""Generate V25 figures for 2025 drug data.
+Score-based and raw TCSP curves: ROC, PRC, Calibration, Score drift vs TCSP.
 """
 
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 import os
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
-V24_FILE = os.path.join(BASE, "Validation", "2025", "2025_V24_EDWARD_SALAH.csv")
 V25_FILE = os.path.join(BASE, "Validation", "2025", "2025_V25_EDWARD_SALAH.csv")
 OUT_DIR = os.path.join(BASE, "Validation", "2025")
 
 
 def main():
-    v24 = pd.read_csv(V24_FILE)
     v25 = pd.read_csv(V25_FILE)
 
-    s24 = pd.to_numeric(v24["MedChem Score V24"], errors="coerce")
     s25 = pd.to_numeric(v25["MedChem Score V25"], errors="coerce")
     tcsp25 = pd.to_numeric(v25["TCSP V25"], errors="coerce")
     y_true = (v25["category"] == "Approved").astype(int)
@@ -29,7 +25,6 @@ def main():
 
     app_mask = y_true == 1
     fail_mask = y_true == 0
-    print(f"V24 Score: Approved median={s24[app_mask].median():.0f}, Failed median={s24[fail_mask].median():.0f}, Gap={s24[fail_mask].median() - s24[app_mask].median():.0f}")
     print(f"V25 Score: Approved median={s25[app_mask].median():.0f}, Failed median={s25[fail_mask].median():.0f}, Gap={s25[fail_mask].median() - s25[app_mask].median():.0f}")
     print(f"V25 TCSP:  Approved median={tcsp25[app_mask].median():.3f}, Failed median={tcsp25[fail_mask].median():.3f}")
 
@@ -38,16 +33,12 @@ def main():
     fig.patch.set_facecolor("white")
 
     # Panel 1: Score-based ROC
-    for scores, label, color, lw, ls in [
-        (s24, "V24 (Context-Aware)", "#B0B0B0", 1.5, "--"),
-        (s25, "V25 (Multi-Agent)", "#9B59B6", 2.5, "-"),
-    ]:
-        valid = ~scores.isna()
-        pred = 101 - scores[valid]
-        fpr, tpr, _ = roc_curve(y_true[valid], pred)
-        roc_auc = auc(fpr, tpr)
-        ax1.plot(fpr, tpr, color=color, lw=lw, ls=ls,
-                 label=f"{label}  AUC: {roc_auc:.3f}")
+    valid = ~s25.isna()
+    pred = 101 - s25[valid]
+    fpr, tpr, _ = roc_curve(y_true[valid], pred)
+    roc_auc = auc(fpr, tpr)
+    ax1.plot(fpr, tpr, color="#9B59B6", lw=2.5,
+             label=f"V25 MedChem Score  AUC: {roc_auc:.3f}")
     ax1.plot([0, 1], [0, 1], color="black", lw=1, ls=":")
     ax1.set_xlabel("False Positive Rate", fontsize=12)
     ax1.set_ylabel("True Positive Rate", fontsize=12)
@@ -57,19 +48,11 @@ def main():
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.02])
 
     # Panel 2: Raw TCSP ROC
-    for scores, label, color, lw, ls, use_tcsp in [
-        (s24, "V24 Score (inverted)", "#B0B0B0", 1.5, "--", False),
-        (tcsp25, "V25 Raw TCSP", "#9B59B6", 2.5, "-", True),
-    ]:
-        valid = ~scores.isna()
-        if use_tcsp:
-            pred = scores[valid]  # higher TCSP = more likely approved
-        else:
-            pred = 101 - scores[valid]
-        fpr, tpr, _ = roc_curve(y_true[valid], pred)
-        roc_auc = auc(fpr, tpr)
-        ax2.plot(fpr, tpr, color=color, lw=lw, ls=ls,
-                 label=f"{label}  AUC: {roc_auc:.3f}")
+    valid_t = ~tcsp25.isna()
+    fpr_t, tpr_t, _ = roc_curve(y_true[valid_t], tcsp25[valid_t])
+    auc_t = auc(fpr_t, tpr_t)
+    ax2.plot(fpr_t, tpr_t, color="#FF8C00", lw=2.5,
+             label=f"V25 Raw TCSP  AUC: {auc_t:.3f}")
     ax2.plot([0, 1], [0, 1], color="black", lw=1, ls=":")
     ax2.set_xlabel("False Positive Rate", fontsize=12)
     ax2.set_ylabel("True Positive Rate", fontsize=12)
@@ -78,10 +61,10 @@ def main():
     ax2.grid(True, alpha=0.2)
     ax2.set_xlim([0, 1]); ax2.set_ylim([0, 1.02])
 
-    plt.suptitle(f"V24 vs V25 — 2025 Drug Data (N={n}, {n_pos} approved)",
+    plt.suptitle(f"V25 — 2025 Drug Data (N={n}, {n_pos} approved)",
                  fontsize=14, fontweight="bold")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    out = os.path.join(OUT_DIR, "2025_v24_vs_v25_roc.png")
+    out = os.path.join(OUT_DIR, "2025_v25_roc.png")
     fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"Saved: {out}")
@@ -92,16 +75,11 @@ def main():
     baseline = n_pos / n
 
     # Panel 1: Score-based PRC
-    for scores, label, color, lw, ls in [
-        (s24, "V24 (Context-Aware)", "#B0B0B0", 1.5, "--"),
-        (s25, "V25 (Multi-Agent)", "#9B59B6", 2.5, "-"),
-    ]:
-        valid = ~scores.isna()
-        pred = 1 - scores[valid] / 100
-        prec, rec, _ = precision_recall_curve(y_true[valid], pred)
-        ap = average_precision_score(y_true[valid], pred)
-        ax1.plot(rec, prec, color=color, lw=lw, ls=ls,
-                 label=f"{label}  AP: {ap:.3f}")
+    pred = 1 - s25[valid] / 100
+    prec, rec, _ = precision_recall_curve(y_true[valid], pred)
+    ap = average_precision_score(y_true[valid], pred)
+    ax1.plot(rec, prec, color="#9B59B6", lw=2.5,
+             label=f"V25 MedChem Score  AP: {ap:.3f}")
     ax1.axhline(y=baseline, color="#555555", linestyle=":", linewidth=1,
                 label=f"Random ({baseline:.2f})")
     ax1.set_xlabel("Recall", fontsize=12)
@@ -112,19 +90,10 @@ def main():
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.05])
 
     # Panel 2: Raw TCSP PRC
-    for scores, label, color, lw, ls, use_tcsp in [
-        (s24, "V24 Score (inverted)", "#B0B0B0", 1.5, "--", False),
-        (tcsp25, "V25 Raw TCSP", "#9B59B6", 2.5, "-", True),
-    ]:
-        valid = ~scores.isna()
-        if use_tcsp:
-            pred = scores[valid]
-        else:
-            pred = 1 - scores[valid] / 100
-        prec, rec, _ = precision_recall_curve(y_true[valid], pred)
-        ap = average_precision_score(y_true[valid], pred)
-        ax2.plot(rec, prec, color=color, lw=lw, ls=ls,
-                 label=f"{label}  AP: {ap:.3f}")
+    prec_t, rec_t, _ = precision_recall_curve(y_true[valid_t], tcsp25[valid_t])
+    ap_t = average_precision_score(y_true[valid_t], tcsp25[valid_t])
+    ax2.plot(rec_t, prec_t, color="#FF8C00", lw=2.5,
+             label=f"V25 Raw TCSP  AP: {ap_t:.3f}")
     ax2.axhline(y=baseline, color="#555555", linestyle=":", linewidth=1,
                 label=f"Random ({baseline:.2f})")
     ax2.set_xlabel("Recall", fontsize=12)
@@ -134,16 +103,16 @@ def main():
     ax2.grid(True, alpha=0.2)
     ax2.set_xlim([0, 1]); ax2.set_ylim([0, 1.05])
 
-    plt.suptitle(f"V24 vs V25 — 2025 Drug Data (N={n}, {n_pos} approved)",
+    plt.suptitle(f"V25 — 2025 Drug Data (N={n}, {n_pos} approved)",
                  fontsize=14, fontweight="bold")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    out = os.path.join(OUT_DIR, "2025_v24_vs_v25_prc.png")
+    out = os.path.join(OUT_DIR, "2025_v25_prc.png")
     fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"Saved: {out}")
 
-    # ── Calibration (3-panel: V24 Score, V25 Score, V25 Raw TCSP) ───────
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 7), sharey=True)
+    # ── Calibration (2-panel: Score + TCSP) ──────────────────────────────
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 7), sharey=True)
     score_bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
     score_labels = ["0-10", "10-20", "20-30", "30-40", "40-50",
                     "50-60", "60-70", "70-80", "80-90", "90-100"]
@@ -155,7 +124,6 @@ def main():
         lambda x: "Approved" if "approved_control" in str(x).lower() else "Liability"
     )
 
-    # Helper to plot a calibration panel
     def cal_panel(ax, values, bins, labels, title, xlabel):
         df_temp = pd.DataFrame({"val": values, "outcome": outcome})
         df_temp["bin"] = pd.cut(df_temp["val"], bins=bins, labels=labels, include_lowest=True)
@@ -179,32 +147,28 @@ def main():
         ax.legend(loc="upper left", fontsize=9)
         ax.set_ylim(0, 1.15)
 
-    cal_panel(ax1, s24, score_bins, score_labels,
-              "V24 — MedChem Score", "MedChem Score V24 Bin")
-    cal_panel(ax2, s25, score_bins, score_labels,
+    cal_panel(ax1, s25, score_bins, score_labels,
               "V25 — MedChem Score", "MedChem Score V25 Bin")
-    cal_panel(ax3, tcsp25 * 100, tcsp_bins, tcsp_labels,
+    cal_panel(ax2, tcsp25 * 100, tcsp_bins, tcsp_labels,
               "V25 — Raw TCSP (%)", "TCSP (%) Bin")
 
-    plt.suptitle(f"Calibration: V24 vs V25 — 2025 Drug Data (N={n})",
+    plt.suptitle(f"Calibration: V25 — 2025 Drug Data (N={n})",
                  fontsize=15, fontweight="bold")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    out = os.path.join(OUT_DIR, "2025_v24_vs_v25_calibration.png")
+    out = os.path.join(OUT_DIR, "2025_v25_calibration.png")
     fig.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"Saved: {out}")
 
-    # ── Score drift scatter (V24 vs V25) ─────────────────────────────────
+    # ── Score vs TCSP scatter ────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(9, 9))
     fig.patch.set_facecolor("white")
     colors = ["#2ECC71" if y == 1 else "#E74C3C" for y in y_true]
-    ax.scatter(s24, s25, c=colors, s=80, edgecolors="black", linewidths=0.5, alpha=0.8)
-    ax.plot([0, 100], [0, 100], color="black", lw=1, ls=":", alpha=0.5)
-    ax.set_xlabel("MedChem Score V24", fontsize=12)
+    ax.scatter(tcsp25 * 100, s25, c=colors, s=80, edgecolors="black", linewidths=0.5, alpha=0.8)
+    ax.set_xlabel("TCSP (%)", fontsize=12)
     ax.set_ylabel("MedChem Score V25", fontsize=12)
-    ax.set_title(f"Score Drift: V24 → V25 — 2025 Drug Data (N={n})",
+    ax.set_title(f"MedChem Score vs Raw TCSP — 2025 Drug Data (N={n})",
                  fontsize=13, fontweight="bold")
-    ax.set_xlim([0, 100]); ax.set_ylim([0, 100])
     ax.grid(True, alpha=0.2)
     from matplotlib.lines import Line2D
     legend_elements = [
@@ -213,30 +177,8 @@ def main():
         Line2D([0], [0], marker='o', color='w', markerfacecolor='#E74C3C',
                markersize=10, markeredgecolor='black', label='Failed'),
     ]
-    ax.legend(handles=legend_elements, loc="upper left", fontsize=11)
-    out = os.path.join(OUT_DIR, "2025_v24_vs_v25_score_drift.png")
-    fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"Saved: {out}")
-
-    # ── V25-only calibration (Score) ─────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(10, 7))
-    fig.patch.set_facecolor("white")
-    cal_panel(ax, s25, score_bins, score_labels,
-              f"V25 Calibration — MedChem Score — 2025 (N={n})",
-              "MedChem Score V25 Bin")
-    out = os.path.join(OUT_DIR, "2025_v25_calibration.png")
-    fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print(f"Saved: {out}")
-
-    # ── V25-only calibration (Raw TCSP) ──────────────────────────────────
-    fig, ax = plt.subplots(figsize=(10, 7))
-    fig.patch.set_facecolor("white")
-    cal_panel(ax, tcsp25 * 100, tcsp_bins, tcsp_labels,
-              f"V25 Calibration — Raw TCSP (%) — 2025 (N={n})",
-              "TCSP (%) Bin")
-    out = os.path.join(OUT_DIR, "2025_v25_raw_tcsp_calibration.png")
+    ax.legend(handles=legend_elements, loc="upper right", fontsize=11)
+    out = os.path.join(OUT_DIR, "2025_v25_score_vs_tcsp.png")
     fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"Saved: {out}")

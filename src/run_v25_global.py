@@ -1,9 +1,9 @@
-"""V25 Multi-Agent Pipeline — Modern SM set (N=219)."""
+"""V25 Multi-Agent Pipeline — Global SM set (N=394, all years)."""
 
 import pandas as pd
 import json
 import os
-import re
+import math
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
@@ -14,8 +14,8 @@ BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(BASE, ".env"))
 
 INPUT_FILE = os.path.join(BASE, "Validation", "data", "final_drug_data_SM_complete.csv")
-OUTPUT_FILE = os.path.join(BASE, "Validation", "modern", "SM_V25_EDWARD_SALAH.csv")
-PROGRESS_FILE = os.path.join(BASE, "sm_v25_progress.jsonl")
+OUTPUT_FILE = os.path.join(BASE, "Validation", "global", "SM_V25_GLOBAL.csv")
+PROGRESS_FILE = os.path.join(BASE, "global_v25_progress.jsonl")
 
 with open(os.path.join(BASE, "Agents/medchem-rationalist/INSTRUCTIONS.md")) as f:
     EDWARD_PROMPT = f.read()
@@ -28,21 +28,6 @@ with open(os.path.join(BASE, "Agents/pharma-clinical-pharmacologist/INSTRUCTIONS
 
 llm = ChatGoogleGenerativeAI(model="gemini-3-pro-preview", temperature=0.0)
 TCSP_CEIL = 0.40
-
-
-def extract_year(val):
-    if pd.isna(val):
-        return None
-    m = re.search(r'(\d{4})', str(val))
-    return int(m.group(1)) if m else None
-
-
-def filter_modern(df):
-    df['year_clean'] = df['year-approved'].apply(extract_year).fillna(
-        df['year_stopped'].apply(extract_year)
-    )
-    df = df[df['year_clean'] >= 1999].reset_index(drop=True)
-    return df
 
 
 def parse_json(content):
@@ -66,7 +51,6 @@ def norm_prob(p):
 
 
 def tcsp_to_score(tcsp):
-    import math
     score = round(100 * (1 - math.sqrt(tcsp / TCSP_CEIL)))
     return max(1, min(100, score))
 
@@ -208,38 +192,60 @@ def run_v25_pipeline(smiles, target, indication):
     }
 
 
+BATCH_SIZE = 10  # molecules processed concurrently
+
+
+def process_one(i, row):
+    """Run V25 pipeline for a single molecule. Returns (index, result_dict)."""
+    smiles = str(row['isomeric'])
+    target = str(row['target_class'])
+    indication = str(row['therapeutic_area'])
+    name = str(row['compound'])
+
+    try:
+        result = run_v25_pipeline(smiles, target, indication)
+        print(f"  [{i+1}] {name}  Score={result.get('edward_score', 'N/A')}  Bio={result.get('salah_verdict', 'N/A')}  Toxi={result.get('toxi_verdict', 'N/A')}  Pharma={result.get('pharma_verdict', 'N/A')}", flush=True)
+        return (i, result)
+    except Exception as e:
+        print(f"  [{i+1}] {name}  ERROR: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return (i, {"error": str(e)})
+
+
 def main():
     df = pd.read_csv(INPUT_FILE)
-    df = filter_modern(df)
 
     start_index = 0
     if os.path.exists(PROGRESS_FILE):
         with open(PROGRESS_FILE, 'r') as f:
             start_index = sum(1 for line in f)
 
-    print(f"V25 Multi-Agent Pipeline — Modern SM (n={len(df)}), resuming from {start_index}", flush=True)
+    remaining = len(df) - start_index
+    print(f"V25 Multi-Agent Pipeline — Global SM (n={len(df)}), resuming from {start_index}, batch_size={BATCH_SIZE}", flush=True)
+    print(f"  {remaining} molecules remaining, ~{remaining // BATCH_SIZE + 1} batches", flush=True)
 
-    for i in range(start_index, len(df)):
-        row = df.iloc[i]
-        smiles = str(row['isomeric'])
-        target = str(row['target_class'])
-        indication = str(row['therapeutic_area'])
+    for batch_start in range(start_index, len(df), BATCH_SIZE):
+        batch_end = min(batch_start + BATCH_SIZE, len(df))
+        batch_rows = [(i, df.iloc[i]) for i in range(batch_start, batch_end)]
 
-        print(f"[{i+1}/{len(df)}] {row['compound']}...", flush=True)
+        print(f"\n--- Batch [{batch_start+1}-{batch_end}] / {len(df)} ---", flush=True)
 
-        try:
-            result = run_v25_pipeline(smiles, target, indication)
-            with open(PROGRESS_FILE, "a") as f:
-                f.write(json.dumps(result) + "\n")
-            print(f"    Score={result.get('edward_score', 'N/A')}  Bio={result.get('salah_verdict', 'N/A')}  Toxi={result.get('toxi_verdict', 'N/A')}  Pharma={result.get('pharma_verdict', 'N/A')}", flush=True)
-        except Exception as e:
-            print(f"    ERROR: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
-            with open(PROGRESS_FILE, "a") as f:
-                f.write(json.dumps({"error": str(e)}) + "\n")
+        with ThreadPoolExecutor(max_workers=BATCH_SIZE) as batch_executor:
+            futures = {
+                batch_executor.submit(process_one, i, row): i
+                for i, row in batch_rows
+            }
+            # Collect results, preserving order
+            batch_results = {}
+            for fut in futures:
+                idx, result = fut.result()
+                batch_results[idx] = result
 
-        time.sleep(1)
+        # Write results in order
+        with open(PROGRESS_FILE, "a") as f:
+            for i in range(batch_start, batch_end):
+                f.write(json.dumps(batch_results[i]) + "\n")
 
     results_list = []
     with open(PROGRESS_FILE, "r") as f:
