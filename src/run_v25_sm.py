@@ -13,13 +13,13 @@ from langchain_core.messages import SystemMessage, HumanMessage
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(BASE, ".env"))
 
-INPUT_FILE = os.path.join(BASE, "final_drug_data_SM_complete.csv")
-OUTPUT_FILE = os.path.join(BASE, "Salah", "modern", "SM_V25_EDWARD_SALAH.csv")
+INPUT_FILE = os.path.join(BASE, "Validation", "data", "final_drug_data_SM_complete.csv")
+OUTPUT_FILE = os.path.join(BASE, "Validation", "modern", "SM_V25_EDWARD_SALAH.csv")
 PROGRESS_FILE = os.path.join(BASE, "sm_v25_progress.jsonl")
 
-with open(os.path.join(BASE, "Agents/edward-medchem-rationalist/INSTRUCTIONS.md")) as f:
+with open(os.path.join(BASE, "Agents/medchem-rationalist/INSTRUCTIONS.md")) as f:
     EDWARD_PROMPT = f.read()
-with open(os.path.join(BASE, "Agents/salah-biological-rationalist/INSTRUCTIONS.md")) as f:
+with open(os.path.join(BASE, "Agents/biological-rationalist/INSTRUCTIONS.md")) as f:
     SALAH_PROMPT = f.read()
 with open(os.path.join(BASE, "Agents/toxi-predictive-toxicologist/INSTRUCTIONS.md")) as f:
     TOXI_PROMPT = f.read()
@@ -231,7 +231,7 @@ def main():
             result = run_v25_pipeline(smiles, target, indication)
             with open(PROGRESS_FILE, "a") as f:
                 f.write(json.dumps(result) + "\n")
-            print(f"    Score={result.get('edward_score', 'N/A')}  Salah={result.get('salah_verdict', 'N/A')}  Toxi={result.get('toxi_verdict', 'N/A')}  Pharma={result.get('pharma_verdict', 'N/A')}", flush=True)
+            print(f"    Score={result.get('edward_score', 'N/A')}  Bio={result.get('salah_verdict', 'N/A')}  Toxi={result.get('toxi_verdict', 'N/A')}  Pharma={result.get('pharma_verdict', 'N/A')}", flush=True)
         except Exception as e:
             print(f"    ERROR: {e}", flush=True)
             import traceback
@@ -248,7 +248,7 @@ def main():
 
     res_df = pd.DataFrame(results_list)
     res_df = res_df.rename(columns={
-        "edward_score": "Edward Score V25",
+        "edward_score": "MedChem Score V25",
         "rational": "Rationale V25",
         "metabolic_stability_estimate": "Metabolic Stability V25",
         "potential_toxic_fragments": "Toxic Fragments V25",
@@ -258,7 +258,7 @@ def main():
         "final_p2": "Final P2 V25", "final_p2_rationale": "Final P2 Rationale V25",
         "final_p3": "Final P3 V25", "final_p3_rationale": "Final P3 Rationale V25",
         "tcsp": "TCSP V25",
-        "salah_verdict": "Salah Verdict V25",
+        "salah_verdict": "Bio Verdict V25",
         "biological_rationale": "Biological Rationale V25",
         "mechanism_validation": "Mechanism Validation V25",
         "druggability_assessment": "Druggability V25",

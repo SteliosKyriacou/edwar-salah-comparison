@@ -1,172 +1,247 @@
-# Edward Comparison Archive: V20 vs. V22 Master Benchmark
+# V25 Multi-Agent Drug Approval Predictor
 
-This folder contains the definitive performance comparison between the purely structural medicinal chemistry engine and the coordinated dual-agent pipeline.
+A multi-agent LLM pipeline that predicts clinical trial success probability for small-molecule drug candidates. Four specialized agents evaluate each molecule in parallel, then a lead agent integrates all assessments into a final score.
 
-## 🏁 The Core Comparison
-We are evaluating the impact of **Biological & Clinical Intelligence** on medicinal chemistry risk assessment.
+## Architecture
 
-*   **V20 (The Pure Chemist)**: Evaluates molecules based strictly on chemical structure, physical properties (MPO), and structural alerts (MBI, hERG, Toxicophores). It is strictly "Librarian-Blind" (no name identification).
-*   **V22 (The Coordinated Pipeline)**: Uses **Salah (Biologist/Pharmacologist)** to perform a preliminary target/indication risk assessment. **Edward (Chemist)** then integrates Salah's advisory (Target Stigma, Dose-Mediated Toxicity, Graveyard Classes) into his structural critique to set the final score.
+```
+                    ┌─────────────────────────┐
+                    │      Input Molecule      │
+                    │  SMILES + Target + Ind.  │
+                    └────────────┬────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                   │
+              ▼                  ▼                   ▼
+   ┌──────────────────┐ ┌───────────────┐ ┌─────────────────┐
+   │  Biological-     │ │     Toxi      │ │     Pharma      │
+   │  Rationalist     │ │  Toxicologist │ │  Pharmacologist  │
+   │  (bio_p1/p2/p3)  │ │ (tox_p1/p2/p3)│ │ (pk_p1/p2/p3)   │
+   └────────┬─────────┘ └──────┬────────┘ └────────┬────────┘
+            │                  │                    │
+            │    ┌─────────────────────────┐        │
+            │    │  MedChem-Rationalist    │        │
+            │    │  Pass 1 (blind struct.) │        │
+            │    │  (chem_p1/p2/p3)        │        │
+            │    └────────────┬────────────┘        │
+            │                 │                     │
+            └─────────────────┼─────────────────────┘
+                              ▼
+                 ┌─────────────────────────┐
+                 │  MedChem-Rationalist    │
+                 │  Pass 2 (integration)   │
+                 │  → final_p1/p2/p3       │
+                 └────────────┬────────────┘
+                              │
+                              ▼
+                 ┌─────────────────────────┐
+                 │  Server-side scoring    │
+                 │  TCSP = p1 × p2 × p3   │
+                 │  Score = f(TCSP)        │
+                 └─────────────────────────┘
+```
 
-## 📊 Dataset Specifications (N=270 Modern Era)
-The primary comparison focuses on the **Modern Era (Post-1995)**. Pre-1995 "Legacy" drugs (hydrazines, toxic fatty acids, greasy tricyclics) were removed to establish a high-fidelity benchmark consistent with 21st-century safety standards.
+**Step 1 (parallel):** Four LLM calls run concurrently — Biological-Rationalist, Toxi, Pharma, and MedChem Pass 1.
+**Step 2 (sequential):** MedChem Pass 2 integrates all advisories into consensus probabilities.
+**Step 3 (deterministic):** `TCSP = final_p1 × final_p2 × final_p3`, then `MedChem Score = round(100 × (1 - √(TCSP / 0.40)))`.
 
-### Data Files
-1.  **`EDWARD_V20_MASTER_MODERN.csv`**: Baseline scores (N=270) using the pure structural engine.
-2.  **`EDWARD_V22_MASTER_MODERN.csv`**: Coordinated scores (N=270) integrating biological insights.
-3.  **`EDWARD_V20_MASTER_GLOBAL.csv`**: The full 405-molecule baseline (all years included).
+## Agents
 
-## 🧪 Key Figures (`/figures`)
-*   **`edward_v20_vs_v22_modern_roc.png`**: Performance spike verification. Shows the AUC boost gained by adding biological intelligence.
-*   **`edward_v20_vs_v22_modern_calibration.png`**: Side-by-side distribution of Success vs. Liability. Shows how V22 "cleans" the elite tier of biologically high-risk compounds.
-*   **`edward_v20_vs_v22_factors_transposed.png`**: The "Salah Effect" map. Tracks the vertical median score jump for every clinical outcome tag (e.g., +33 for Hepatotoxicity).
-*   **`edward_v20_vs_v22_score_drift.png`**: Scatter plot visualizing the "Biological Penalty" applied to chemically clean failures.
+| Agent | Role | Output |
+|---|---|---|
+| **Biological-Rationalist** | Target biology, mechanism validation, druggability | `bio_p1/p2/p3`, verdict (ELITE/CAUTION/TERMINATE) |
+| **Toxi** | Safety liabilities, structural alerts, therapeutic window | `tox_p1/p2/p3`, verdict (CLEAN/MANAGEABLE/NARROW/TOXIC) |
+| **Pharma** | PK/PD feasibility, dose, oral bioavailability, DDI | `pk_p1/p2/p3`, verdict (FAVORABLE/ADEQUATE/CHALLENGING/IMPRACTICAL) |
+| **MedChem-Rationalist** | Structural critique (Pass 1) + advisory integration (Pass 2) | `chem_p1/p2/p3`, `final_p1/p2/p3`, MedChem Score |
 
-## 🛠 How to Recreate the V20/V22 Analysis
-All necessary scripts and agent definitions are provided in this repository.
+## Installation
 
-1.  **Environment**: Use the `openfe_elite` Conda environment or any environment with `pandas`, `seaborn`, `matplotlib`, `langchain`, and `langchain-google-genai`.
-2.  **API Key**: Export your Google API Key: `export GOOGLE_API_KEY="your_key"`.
-3.  **Run the Audit**:
-    - The coordinated V22 audit uses `src/run_v22_coordinated_audit.py`. It requires the `Agents/` folder and the input CSVs.
-4.  **Generate Figures**:
-    - Use `src/generate_v20_vs_v22_coordinated.py` to recreate the ROC, Calibration, and Transposed Factors plots comparing the pure structural engine against the biological insight engine.
-
----
-
-## 🧬 V23 — Calibrated Structural Alerts (branch: `v23`)
-
-V23 applies two targeted prompt fixes to the V22 pipeline:
-1. **Edward**: Prevent scaffold-similarity guessing + calibrate structural alert severity (alerts are risk factors, not automatic death sentences)
-2. **Salah**: Add Librarian Ban (no molecule identification by name)
-
-### V23 AUC Summary
-
-| Set | V20 | V22 | V23 |
-|---|---|---|---|
-| Modern (N=219) | 0.774 | 0.933 | 0.877 |
-| Legacy (N=175) | 0.806 | 0.916 | 0.813 |
-| Global (N=394) | 0.740 | 0.900 | 0.828 |
-| 2025 (N=29) | — | — | 0.643 |
-
-### How to Recreate All V23 CSVs in `Salah/`
-
-**Prerequisites**: Activate the `edward_salah` conda environment. Ensure `.env` contains your `GOOGLE_API_KEY`. The input dataset is `final_drug_data_SM_complete.csv` (394 molecules). The 2025 dataset is `2025_drug_data_complete.csv` (29 molecules).
+### 1. Create the conda environment
 
 ```bash
+conda create -n edward_salah python=3.11 -y
 conda activate edward_salah
 ```
 
-**Step 1 — Run V23 Modern SM audit (219 molecules, ~5 hours)**
+### 2. Install dependencies
+
 ```bash
-# Produces: Salah/modern/SM_V23_EDWARD_SALAH.csv
-# Progress: sm_v23_progress.jsonl (resumable)
-python -u src/run_v23_sm.py
+pip install pandas scikit-learn matplotlib langchain-google-genai python-dotenv
 ```
 
-**Step 2 — Run V23 Legacy SM audit (175 molecules, ~4 hours)**
-```bash
-# Produces: Salah/legacy/SM_V23_EDWARD_SALAH_LEGACY.csv
-# Progress: legacy_v23_progress.jsonl (resumable)
-python -u src/run_v23_legacy.py
+### 3. Set up your API key
+
+Create a `.env` file in the project root:
+
+```
+GOOGLE_API_KEY=your_google_api_key_here
 ```
 
-**Step 3 — Run V23 on 2025 drug data (29 molecules, ~20 min)**
+The pipeline uses **Google Gemini 3 Pro Preview** via `langchain-google-genai`.
+
+## Usage
+
+### Run on any CSV file
+
 ```bash
-# Produces: Salah/2025/2025_V23_EDWARD_SALAH.csv
-# Progress: 2025_v23_progress.jsonl (resumable)
-python -u src/run_2025_v23.py
+python src/main.py INPUT_FILE \
+    --smiles SMILES_COLUMN \
+    --target TARGET_COLUMN \
+    --indication INDICATION_COLUMN \
+    [-o OUTPUT_FILE] \
+    [--name NAME_COLUMN]
 ```
 
-**Step 4 — Combine Modern + Legacy into Global CSV**
+**Arguments:**
+- `INPUT_FILE` — path to input CSV
+- `--smiles` — column containing SMILES strings
+- `--target` — column containing target class (e.g., "Enzyme", "GPCR", "Kinase")
+- `--indication` — column containing therapeutic area (e.g., "Oncology", "Cardiovascular")
+- `-o` / `--output` — output CSV path (default: `<input>_V25.csv`)
+- `--name` — optional column for compound name (shown in progress output)
+
+**Example:**
+
+```bash
+conda activate edward_salah
+
+# Run on a custom dataset
+python src/main.py my_molecules.csv \
+    --smiles canonical_smiles \
+    --target target_class \
+    --indication therapeutic_area \
+    --name compound_name \
+    -o results/my_molecules_scored.csv
+```
+
+The output CSV contains all original columns plus all V25 computed columns (scores, verdicts, probabilities, rationales).
+
+### Resumability
+
+All runs use append-only `.jsonl` progress files. If interrupted, re-run the same command — it resumes from where it left off. To start fresh, delete the progress file (printed at startup).
+
+## Smoke Test
+
+```bash
+python test/test_v25_smoke.py
+```
+
+Runs the pipeline on 2 molecules:
+- **Good:** Atorvastatin (HMG-CoA inhibitor) — expects low score
+- **Bad:** Toxic design (nitroaromatic + hydrazine + hERG trap) — expects high score
+
+Verifies the system correctly differentiates good from bad molecules.
+
+## Recreating Validation Results
+
+The `Validation/` folder contains input data and output subfolders for reproducible benchmarking.
+
+### Input Data
+
+All input CSVs are in `Validation/data/`:
+
+| File | Description |
+|---|---|
+| `2025_drug_data_complete.csv` | 29 drugs with known 2025 outcomes |
+| `final_drug_data_SM_complete.csv` | 394 small molecules (split into Modern ≥1999 and Legacy <1999) |
+| `neuro_candidates.csv` | Neurological drug candidates |
+
+### Step 1 — Run V25 on 2025 drugs (N=29, ~30 min)
+
+```bash
+python -u src/run_2025_v25.py
+# Output: Validation/2025/2025_V25_EDWARD_SALAH.csv
+# Progress: 2025_v25_progress.jsonl
+```
+
+### Step 2 — Run V25 on Modern SM (N=219, ~5 hours)
+
+```bash
+python -u src/run_v25_sm.py
+# Output: Validation/modern/SM_V25_EDWARD_SALAH.csv
+# Progress: sm_v25_progress.jsonl
+```
+
+### Step 3 — Run V25 on Legacy SM (N=175, ~4 hours)
+
+```bash
+python -u src/run_v25_legacy.py
+# Output: Validation/legacy/SM_V25_EDWARD_SALAH_LEGACY.csv
+# Progress: legacy_v25_progress.jsonl
+```
+
+### Step 4 — Combine Modern + Legacy into Global
+
 ```bash
 python -c "
 import pandas as pd
-modern = pd.read_csv('Salah/modern/SM_V23_EDWARD_SALAH.csv')
-legacy = pd.read_csv('Salah/legacy/SM_V23_EDWARD_SALAH_LEGACY.csv')
-pd.concat([modern, legacy], ignore_index=True).to_csv('Salah/global/SM_V23_EDWARD_SALAH_GLOBAL.csv', index=False)
+modern = pd.read_csv('Validation/modern/SM_V25_EDWARD_SALAH.csv')
+legacy = pd.read_csv('Validation/legacy/SM_V25_EDWARD_SALAH_LEGACY.csv')
+pd.concat([modern, legacy], ignore_index=True).to_csv('Validation/global/SM_V25_EDWARD_SALAH_GLOBAL.csv', index=False)
 print(f'Global: {len(modern) + len(legacy)} rows')
 "
 ```
 
-### How to Recreate All V23 Plots
+### Step 5 — Generate comparison figures
 
-All figure scripts read from the CSVs above. No LLM calls needed.
+The figure scripts read from the V25 CSVs above (plus earlier version CSVs if available). No LLM calls needed.
 
 ```bash
-# Modern: V20 vs V22 vs V23 ROC + PRC (3-way comparison)
-python src/generate_v23_roc.py
-# Output: Salah/modern/sm_v20_v22_v23_roc.png
-#         Salah/modern/sm_v20_v22_v23_prc.png
+# 2025: V24 vs V25 ROC, PRC, calibration, score drift
+python src/generate_2025_v25_figures.py
+# Output: Validation/2025/2025_v24_vs_v25_roc.png
+#         Validation/2025/2025_v24_vs_v25_prc.png
+#         Validation/2025/2025_v24_vs_v25_calibration.png
+#         Validation/2025/2025_v24_vs_v25_score_drift.png
+#         Validation/2025/2025_v25_calibration.png
+#         Validation/2025/2025_v25_raw_tcsp_calibration.png
 
-# Modern: V20 vs V23 ROC + calibration bar chart (3-panel)
-python src/generate_v23_figures.py
-# Output: Salah/modern/sm_v20_vs_v23_roc.png
-#         Salah/modern/sm_v20_v22_v23_calibration.png
-
-# Global + Legacy: V20 vs V22 vs V23 ROC, PRC, calibration
-python src/generate_global_v23_figures.py
-# Output: Salah/global/sm_v20_v22_v23_roc.png
-#         Salah/global/sm_v20_v22_v23_prc.png
-#         Salah/global/sm_v20_v22_v23_calibration.png
-#         Salah/legacy/sm_v20_v22_v23_roc.png
-
-# 2025: Calibration, ROC, PRC
-python src/generate_2025_figures.py
-# Output: Salah/2025/2025_v23_calibration.png
-#         Salah/2025/2025_v23_roc.png
-#         Salah/2025/2025_v23_prc.png
-
-# V20 vs V22 PRC curves (all sets, existing)
-python src/generate_prc_curves.py
-# Output: Salah/modern/sm_edward_vs_edward_salah_prc.png
-#         Salah/global/sm_edward_vs_edward_salah_prc.png
-#         Salah/legacy/sm_edward_vs_edward_salah_prc.png
-#         Salah/prc_all_sets_combined.png
+# Modern/Legacy/Global: V20→V25 5-way comparison
+python src/generate_v25_figures.py
+# Output: Validation/{modern,legacy,global}/sm_v20_v22_v23_v24_v25_roc.png
+#         Validation/{modern,legacy,global}/sm_v20_v22_v23_v24_v25_prc.png
+#         Validation/{modern,legacy,global}/sm_v20_v22_v23_v24_v25_calibration.png
 ```
 
-### Salah Folder Structure
+### Validation Folder Structure
 
 ```
-Salah/
-├── modern/
-│   ├── SM_V20_EDWARD_ONLY.csv              # V20 Edward-only (219 molecules)
-│   ├── SM_V22_EDWARD_SALAH.csv             # V22 Edward+Salah (219 molecules)
-│   ├── SM_V23_EDWARD_SALAH.csv             # V23 Calibrated (219 molecules)
-│   ├── sm_v20_v22_v23_roc.png              # 3-way ROC comparison
-│   ├── sm_v20_v22_v23_prc.png              # 3-way PRC comparison
-│   ├── sm_v20_v22_v23_calibration.png      # 3-panel calibration bar chart
-│   ├── sm_v20_vs_v23_roc.png              # V20 vs V23 direct ROC
-│   ├── sm_edward_vs_edward_salah_*.png     # V20 vs V22 figures
-│   └── sm_v2*_progress.jsonl              # Progress files
-├── legacy/
-│   ├── SM_V20_EDWARD_ONLY_LEGACY.csv       # V20 (175 molecules)
-│   ├── SM_V22_EDWARD_SALAH_LEGACY.csv      # V22 (175 molecules)
-│   ├── SM_V23_EDWARD_SALAH_LEGACY.csv      # V23 (175 molecules)
-│   ├── sm_v20_v22_v23_roc.png              # 3-way ROC
-│   └── sm_edward_vs_edward_salah_*.png     # V20 vs V22 figures
-├── global/
-│   ├── SM_V20_EDWARD_ONLY_GLOBAL.csv       # V20 (394 molecules)
-│   ├── SM_V22_EDWARD_SALAH_GLOBAL.csv      # V22 (394 molecules)
-│   ├── SM_V23_EDWARD_SALAH_GLOBAL.csv      # V23 (394 molecules)
-│   ├── sm_v20_v22_v23_roc.png              # 3-way ROC
-│   ├── sm_v20_v22_v23_prc.png              # 3-way PRC
-│   ├── sm_v20_v22_v23_calibration.png      # 3-panel calibration
-│   └── sm_edward_vs_edward_salah_*.png     # V20 vs V22 figures
-└── 2025/
-    ├── 2025_V23_EDWARD_SALAH.csv           # V23 (29 molecules)
-    ├── 2025_v23_calibration.png            # Calibration bar chart
-    ├── 2025_v23_roc.png                    # ROC curve (AUC 0.643)
-    └── 2025_v23_prc.png                    # PRC curve
+Validation/
+├── data/
+│   ├── 2025_drug_data_complete.csv
+│   ├── final_drug_data_SM_complete.csv
+│   └── neuro_candidates.csv
+├── 2025/          # 2025 drug results + figures
+├── modern/        # Modern era (≥1999) results + figures
+├── legacy/        # Legacy era (<1999) results + figures
+└── global/        # Combined modern+legacy results + figures
 ```
 
-### Notes on Resumability
+## Project Structure
 
-All audit scripts use append-only `.jsonl` progress files. If a run is interrupted, simply re-run the same script — it will count existing lines in the progress file and resume from where it left off. To start fresh, delete the corresponding progress file first.
+```
+.
+├── Agents/
+│   ├── medchem-rationalist/INSTRUCTIONS.md
+│   ├── biological-rationalist/INSTRUCTIONS.md
+│   ├── toxi-predictive-toxicologist/INSTRUCTIONS.md
+│   └── pharma-clinical-pharmacologist/INSTRUCTIONS.md
+├── src/
+│   ├── main.py                      # Generic CLI entry point
+│   ├── run_2025_v25.py              # V25 pipeline for 2025 drugs
+│   ├── run_v25_sm.py                # V25 pipeline for Modern SM
+│   ├── run_v25_legacy.py            # V25 pipeline for Legacy SM
+│   ├── generate_2025_v25_figures.py # 2025 comparison figures
+│   └── generate_v25_figures.py      # Multi-version comparison figures
+├── test/
+│   └── test_v25_smoke.py            # Smoke test (1 good + 1 bad molecule)
+├── Validation/                      # Input data + output results
+├── .env                             # API key (not committed)
+└── README.md
+```
 
-### Notes on 2025 Dataset
+## Scoring
 
-The 2025 drug data (`2025_drug_data_complete.csv`) contains 29 molecules after removing 3 data-quality exclusions (Pasodacigib, BAY-2965501, Bitopertin). V23 achieves AUC 0.643 on this set due to a paradigm shift in drug design — see `post_2025_instructions.md` for detailed failure analysis and V24 upgrade priorities.
-
-## 🏁 Conclusion
-The transition from V20 to V22 represents the shift from a **Structural Filter** to a **Clinical Success Predictor**. V23 adds structural alert calibration and Librarian Ban enforcement, maintaining strong performance on historical data (Global AUC 0.828) while revealing the need for era-aware updates on 2025 drugs. See `post_2025_instructions.md` for the roadmap to V24.
+- **MedChem Score**: 1 (best) to 100 (worst). Derived deterministically from TCSP.
+- **TCSP** (Total Clinical Success Probability): `final_p1 × final_p2 × final_p3`. Raw probability of approval.
+- **P1/P2/P3**: Per-phase probabilities calibrated against industry base rates (P1~0.65, P2~0.30, P3~0.58).

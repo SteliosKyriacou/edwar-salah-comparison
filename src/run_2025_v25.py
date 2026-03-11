@@ -1,7 +1,7 @@
 """V25 Multi-Agent Pipeline — 2025 drug data (N=29).
 
 Architecture:
-  Step 1 (parallel): Salah + Toxi + Pharma + Edward Pass 1
+  Step 1 (parallel): Bio + Toxi + Pharma + Edward Pass 1
   Step 2 (sequential): Edward Pass 2 (integrates all advisories)
   Step 3 (server-side): TCSP calculation + deterministic score mapping
 """
@@ -18,14 +18,14 @@ from langchain_core.messages import SystemMessage, HumanMessage
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(BASE, ".env"))
 
-INPUT_FILE = os.path.join(BASE, "2025_drug_data_complete.csv")
-OUTPUT_FILE = os.path.join(BASE, "Salah", "2025", "2025_V25_EDWARD_SALAH.csv")
+INPUT_FILE = os.path.join(BASE, "Validation", "data", "2025_drug_data_complete.csv")
+OUTPUT_FILE = os.path.join(BASE, "Validation", "2025", "2025_V25_EDWARD_SALAH.csv")
 PROGRESS_FILE = os.path.join(BASE, "2025_v25_progress.jsonl")
 
 # Load agent prompts
-with open(os.path.join(BASE, "Agents/edward-medchem-rationalist/INSTRUCTIONS.md")) as f:
+with open(os.path.join(BASE, "Agents/medchem-rationalist/INSTRUCTIONS.md")) as f:
     EDWARD_PROMPT = f.read()
-with open(os.path.join(BASE, "Agents/salah-biological-rationalist/INSTRUCTIONS.md")) as f:
+with open(os.path.join(BASE, "Agents/biological-rationalist/INSTRUCTIONS.md")) as f:
     SALAH_PROMPT = f.read()
 with open(os.path.join(BASE, "Agents/toxi-predictive-toxicologist/INSTRUCTIONS.md")) as f:
     TOXI_PROMPT = f.read()
@@ -143,7 +143,7 @@ TASK: Integrate all advisories with your own Pass 1 assessment. Produce final co
 
 def run_v25_pipeline(smiles, target, indication):
     """Full V25 pipeline for one molecule."""
-    # Step 1: Parallel — Salah, Toxi, Pharma, Edward Pass 1
+    # Step 1: Parallel — Biological-Rationalist, Toxi, Pharma, Edward Pass 1
     with ThreadPoolExecutor(max_workers=4) as executor:
         fut_salah = executor.submit(run_salah, smiles, target, indication)
         fut_toxi = executor.submit(run_toxi, smiles, target, indication)
@@ -184,7 +184,7 @@ def run_v25_pipeline(smiles, target, indication):
         "final_p3": fp3,
         "final_p3_rationale": pass2_data.get("final_p3_rationale", ""),
         "tcsp": tcsp,
-        # Salah
+        # Biological-Rationalist
         "salah_verdict": salah_data.get("salah_verdict", ""),
         "biological_rationale": salah_data.get("biological_rationale", ""),
         "mechanism_validation": salah_data.get("mechanism_validation", ""),
@@ -244,7 +244,7 @@ def main():
             pharma_v = result.get('pharma_verdict', 'N/A')
             tcsp = result.get('tcsp', 0)
             tcsp_pct = tcsp * 100 if isinstance(tcsp, float) and tcsp <= 1 else tcsp
-            print(f"    Score={score}  Salah={verdict}  Toxi={toxi_v}  Pharma={pharma_v}  TCSP={tcsp_pct:.2f}%", flush=True)
+            print(f"    Score={score}  Bio={verdict}  Toxi={toxi_v}  Pharma={pharma_v}  TCSP={tcsp_pct:.2f}%", flush=True)
         except Exception as e:
             print(f"    ERROR: {e}", flush=True)
             import traceback
@@ -262,7 +262,7 @@ def main():
 
     res_df = pd.DataFrame(results_list)
     res_df = res_df.rename(columns={
-        "edward_score": "Edward Score V25",
+        "edward_score": "MedChem Score V25",
         "rational": "Rationale V25",
         "metabolic_stability_estimate": "Metabolic Stability V25",
         "potential_toxic_fragments": "Toxic Fragments V25",
@@ -272,7 +272,7 @@ def main():
         "final_p2": "Final P2 V25", "final_p2_rationale": "Final P2 Rationale V25",
         "final_p3": "Final P3 V25", "final_p3_rationale": "Final P3 Rationale V25",
         "tcsp": "TCSP V25",
-        "salah_verdict": "Salah Verdict V25",
+        "salah_verdict": "Bio Verdict V25",
         "biological_rationale": "Biological Rationale V25",
         "mechanism_validation": "Mechanism Validation V25",
         "druggability_assessment": "Druggability V25",

@@ -26,7 +26,7 @@ def plot_roc_dual(score_datasets, tcsp_dataset, y_true, title, out_path):
     ax1.plot([0, 1], [0, 1], color="black", lw=1, ls=":")
     ax1.set_xlabel("False Positive Rate", fontsize=12)
     ax1.set_ylabel("True Positive Rate", fontsize=12)
-    ax1.set_title("ROC — Edward Score", fontsize=13, fontweight="bold")
+    ax1.set_title("ROC — MedChem Score", fontsize=13, fontweight="bold")
     ax1.legend(loc="lower right", fontsize=9, framealpha=0.9)
     ax1.grid(True, alpha=0.2)
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.02])
@@ -90,7 +90,7 @@ def plot_prc_dual(score_datasets, tcsp_dataset, y_true, title, out_path):
                 label=f"Random ({baseline:.2f})")
     ax1.set_xlabel("Recall", fontsize=12)
     ax1.set_ylabel("Precision", fontsize=12)
-    ax1.set_title("PRC — Edward Score", fontsize=13, fontweight="bold")
+    ax1.set_title("PRC — MedChem Score", fontsize=13, fontweight="bold")
     ax1.legend(loc="upper right", fontsize=9, framealpha=0.9)
     ax1.grid(True, alpha=0.2)
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.05])
@@ -177,11 +177,11 @@ def process_set(set_name, dir_path, v20_file, v22_file, v23_file, v24_file, v25_
     v24 = pd.read_csv(v24_file)
     v25 = pd.read_csv(v25_file)
 
-    s20 = pd.to_numeric(v20["Edward Score V20"], errors="coerce")
-    s22 = pd.to_numeric(v22["Edward Score V22"], errors="coerce")
-    s23 = pd.to_numeric(v23["Edward Score V23"], errors="coerce")
-    s24 = pd.to_numeric(v24["Edward Score V24"], errors="coerce")
-    s25 = pd.to_numeric(v25["Edward Score V25"], errors="coerce")
+    s20 = pd.to_numeric(v20["MedChem Score V20"], errors="coerce")
+    s22 = pd.to_numeric(v22["MedChem Score V22"], errors="coerce")
+    s23 = pd.to_numeric(v23["MedChem Score V23"], errors="coerce")
+    s24 = pd.to_numeric(v24["MedChem Score V24"], errors="coerce")
+    s25 = pd.to_numeric(v25["MedChem Score V25"], errors="coerce")
     tcsp25 = pd.to_numeric(v25["TCSP V25"], errors="coerce")
     y_true = (v22[cat_col] == cat_val).astype(int)
 
@@ -198,7 +198,7 @@ def process_set(set_name, dir_path, v20_file, v22_file, v23_file, v24_file, v25_
 
     versions = [
         (s20, y_true, "V20 (Edward Only)", "#B0B0B0", 1.0, "--"),
-        (s22, y_true, "V22 (Edward + Salah)", "#4A90E2", 1.0, "--"),
+        (s22, y_true, "V22 (MedChem + Bio)", "#4A90E2", 1.0, "--"),
         (s23, y_true, "V23 (Calibrated)", "#2ECC71", 1.5, "--"),
         (s24, y_true, "V24 (Context-Aware)", "#E74C3C", 2.0, "-"),
         (s25, y_true, "V25 (Multi-Agent)", "#9B59B6", 2.5, "-"),
@@ -236,28 +236,28 @@ def process_set(set_name, dir_path, v20_file, v22_file, v23_file, v24_file, v25_
 
 def main():
     process_set("Modern",
-                os.path.join(BASE, "Salah", "modern"),
-                os.path.join(BASE, "Salah", "modern", "SM_V20_EDWARD_ONLY.csv"),
-                os.path.join(BASE, "Salah", "modern", "SM_V22_EDWARD_SALAH.csv"),
-                os.path.join(BASE, "Salah", "modern", "SM_V23_EDWARD_SALAH.csv"),
-                os.path.join(BASE, "Salah", "modern", "SM_V24_EDWARD_SALAH.csv"),
-                os.path.join(BASE, "Salah", "modern", "SM_V25_EDWARD_SALAH.csv"))
+                os.path.join(BASE, "Validation", "modern"),
+                os.path.join(BASE, "Validation", "modern", "SM_V20_EDWARD_ONLY.csv"),
+                os.path.join(BASE, "Validation", "modern", "SM_V22_EDWARD_SALAH.csv"),
+                os.path.join(BASE, "Validation", "modern", "SM_V23_EDWARD_SALAH.csv"),
+                os.path.join(BASE, "Validation", "modern", "SM_V24_EDWARD_SALAH.csv"),
+                os.path.join(BASE, "Validation", "modern", "SM_V25_EDWARD_SALAH.csv"))
 
     process_set("Legacy",
-                os.path.join(BASE, "Salah", "legacy"),
-                os.path.join(BASE, "Salah", "legacy", "SM_V20_EDWARD_ONLY_LEGACY.csv"),
-                os.path.join(BASE, "Salah", "legacy", "SM_V22_EDWARD_SALAH_LEGACY.csv"),
-                os.path.join(BASE, "Salah", "legacy", "SM_V23_EDWARD_SALAH_LEGACY.csv"),
-                os.path.join(BASE, "Salah", "legacy", "SM_V24_EDWARD_SALAH_LEGACY.csv"),
-                os.path.join(BASE, "Salah", "legacy", "SM_V25_EDWARD_SALAH_LEGACY.csv"))
+                os.path.join(BASE, "Validation", "legacy"),
+                os.path.join(BASE, "Validation", "legacy", "SM_V20_EDWARD_ONLY_LEGACY.csv"),
+                os.path.join(BASE, "Validation", "legacy", "SM_V22_EDWARD_SALAH_LEGACY.csv"),
+                os.path.join(BASE, "Validation", "legacy", "SM_V23_EDWARD_SALAH_LEGACY.csv"),
+                os.path.join(BASE, "Validation", "legacy", "SM_V24_EDWARD_SALAH_LEGACY.csv"),
+                os.path.join(BASE, "Validation", "legacy", "SM_V25_EDWARD_SALAH_LEGACY.csv"))
 
     process_set("Global",
-                os.path.join(BASE, "Salah", "global"),
-                os.path.join(BASE, "Salah", "global", "SM_V20_EDWARD_ONLY_GLOBAL.csv"),
-                os.path.join(BASE, "Salah", "global", "SM_V22_EDWARD_SALAH_GLOBAL.csv"),
-                os.path.join(BASE, "Salah", "global", "SM_V23_EDWARD_SALAH_GLOBAL.csv"),
-                os.path.join(BASE, "Salah", "global", "SM_V24_EDWARD_SALAH_GLOBAL.csv"),
-                os.path.join(BASE, "Salah", "global", "SM_V25_EDWARD_SALAH_GLOBAL.csv"))
+                os.path.join(BASE, "Validation", "global"),
+                os.path.join(BASE, "Validation", "global", "SM_V20_EDWARD_ONLY_GLOBAL.csv"),
+                os.path.join(BASE, "Validation", "global", "SM_V22_EDWARD_SALAH_GLOBAL.csv"),
+                os.path.join(BASE, "Validation", "global", "SM_V23_EDWARD_SALAH_GLOBAL.csv"),
+                os.path.join(BASE, "Validation", "global", "SM_V24_EDWARD_SALAH_GLOBAL.csv"),
+                os.path.join(BASE, "Validation", "global", "SM_V25_EDWARD_SALAH_GLOBAL.csv"))
 
     print("\nDone!")
 

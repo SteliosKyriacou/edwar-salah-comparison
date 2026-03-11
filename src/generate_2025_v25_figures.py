@@ -9,17 +9,17 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_prec
 import os
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
-V24_FILE = os.path.join(BASE, "Salah", "2025", "2025_V24_EDWARD_SALAH.csv")
-V25_FILE = os.path.join(BASE, "Salah", "2025", "2025_V25_EDWARD_SALAH.csv")
-OUT_DIR = os.path.join(BASE, "Salah", "2025")
+V24_FILE = os.path.join(BASE, "Validation", "2025", "2025_V24_EDWARD_SALAH.csv")
+V25_FILE = os.path.join(BASE, "Validation", "2025", "2025_V25_EDWARD_SALAH.csv")
+OUT_DIR = os.path.join(BASE, "Validation", "2025")
 
 
 def main():
     v24 = pd.read_csv(V24_FILE)
     v25 = pd.read_csv(V25_FILE)
 
-    s24 = pd.to_numeric(v24["Edward Score V24"], errors="coerce")
-    s25 = pd.to_numeric(v25["Edward Score V25"], errors="coerce")
+    s24 = pd.to_numeric(v24["MedChem Score V24"], errors="coerce")
+    s25 = pd.to_numeric(v25["MedChem Score V25"], errors="coerce")
     tcsp25 = pd.to_numeric(v25["TCSP V25"], errors="coerce")
     y_true = (v25["category"] == "Approved").astype(int)
 
@@ -51,7 +51,7 @@ def main():
     ax1.plot([0, 1], [0, 1], color="black", lw=1, ls=":")
     ax1.set_xlabel("False Positive Rate", fontsize=12)
     ax1.set_ylabel("True Positive Rate", fontsize=12)
-    ax1.set_title("ROC — Edward Score", fontsize=13, fontweight="bold")
+    ax1.set_title("ROC — MedChem Score", fontsize=13, fontweight="bold")
     ax1.legend(loc="lower right", fontsize=10, framealpha=0.9)
     ax1.grid(True, alpha=0.2)
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.02])
@@ -106,7 +106,7 @@ def main():
                 label=f"Random ({baseline:.2f})")
     ax1.set_xlabel("Recall", fontsize=12)
     ax1.set_ylabel("Precision", fontsize=12)
-    ax1.set_title("PRC — Edward Score", fontsize=13, fontweight="bold")
+    ax1.set_title("PRC — MedChem Score", fontsize=13, fontweight="bold")
     ax1.legend(loc="upper right", fontsize=10, framealpha=0.9)
     ax1.grid(True, alpha=0.2)
     ax1.set_xlim([0, 1]); ax1.set_ylim([0, 1.05])
@@ -180,9 +180,9 @@ def main():
         ax.set_ylim(0, 1.15)
 
     cal_panel(ax1, s24, score_bins, score_labels,
-              "V24 — Edward Score", "Edward Score V24 Bin")
+              "V24 — MedChem Score", "MedChem Score V24 Bin")
     cal_panel(ax2, s25, score_bins, score_labels,
-              "V25 — Edward Score", "Edward Score V25 Bin")
+              "V25 — MedChem Score", "MedChem Score V25 Bin")
     cal_panel(ax3, tcsp25 * 100, tcsp_bins, tcsp_labels,
               "V25 — Raw TCSP (%)", "TCSP (%) Bin")
 
@@ -200,8 +200,8 @@ def main():
     colors = ["#2ECC71" if y == 1 else "#E74C3C" for y in y_true]
     ax.scatter(s24, s25, c=colors, s=80, edgecolors="black", linewidths=0.5, alpha=0.8)
     ax.plot([0, 100], [0, 100], color="black", lw=1, ls=":", alpha=0.5)
-    ax.set_xlabel("Edward Score V24", fontsize=12)
-    ax.set_ylabel("Edward Score V25", fontsize=12)
+    ax.set_xlabel("MedChem Score V24", fontsize=12)
+    ax.set_ylabel("MedChem Score V25", fontsize=12)
     ax.set_title(f"Score Drift: V24 → V25 — 2025 Drug Data (N={n})",
                  fontsize=13, fontweight="bold")
     ax.set_xlim([0, 100]); ax.set_ylim([0, 100])
@@ -223,8 +223,8 @@ def main():
     fig, ax = plt.subplots(figsize=(10, 7))
     fig.patch.set_facecolor("white")
     cal_panel(ax, s25, score_bins, score_labels,
-              f"V25 Calibration — Edward Score — 2025 (N={n})",
-              "Edward Score V25 Bin")
+              f"V25 Calibration — MedChem Score — 2025 (N={n})",
+              "MedChem Score V25 Bin")
     out = os.path.join(OUT_DIR, "2025_v25_calibration.png")
     fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
     plt.close(fig)
@@ -243,14 +243,14 @@ def main():
 
     # ── Verdict distribution ─────────────────────────────────────────────
     print("\n--- V25 Verdict Distribution ---")
-    for vtype, col in [("Salah", "Salah Verdict V25"), ("Toxi", "Toxi Verdict V25"), ("Pharma", "Pharma Verdict V25")]:
+    for vtype, col in [("Bio", "Bio Verdict V25"), ("Toxi", "Toxi Verdict V25"), ("Pharma", "Pharma Verdict V25")]:
         if col in v25.columns:
             print(f"\n{vtype}:")
             for verdict in v25[col].unique():
                 mask = v25[col] == verdict
                 count = mask.sum()
                 if count > 0:
-                    scores = pd.to_numeric(v25.loc[mask, "Edward Score V25"], errors="coerce")
+                    scores = pd.to_numeric(v25.loc[mask, "MedChem Score V25"], errors="coerce")
                     app = (v25.loc[mask, "category"] == "Approved").sum()
                     print(f"  {verdict}: {count} (Approved={app}, Failed={count-app}, median score={scores.median():.0f})")
 
