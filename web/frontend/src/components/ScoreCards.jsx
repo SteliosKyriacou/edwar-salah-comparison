@@ -38,7 +38,7 @@ export default function ScoreCards({ overview }) {
       </div>
 
       <div className="score-card">
-        <div className="label">TCSP</div>
+        <div className="label">Clinical Success Probability</div>
         <div className="value" style={{ color: 'var(--accent-orange)' }}>
           {overview.tcsp_pct}%
         </div>

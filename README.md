@@ -240,6 +240,44 @@ Validation/
 └── README.md
 ```
 
+## Web App
+
+Interactive web interface for single-molecule predictions with a real-time prediction dashboard.
+
+### Quick Start
+
+```bash
+# 1. Activate the conda environment
+conda activate edwar-salah
+
+# 2. Install frontend dependencies (first time only)
+cd web/frontend && npm install && cd ../..
+
+# 3. Start the app (backend + frontend)
+bash web/start.sh
+```
+
+The app will be available at:
+- **App**: http://localhost:5173
+- **Prediction Dashboard**: http://localhost:5173/dashboard (map of prediction locations)
+- **Backend API**: http://localhost:8000/api/health
+
+### Run in background (persists after terminal close)
+
+```bash
+nohup bash web/start.sh > /tmp/web-app.log 2>&1 &
+```
+
+### Stop the app
+
+```bash
+lsof -ti:5173 -ti:8000 | xargs kill -9
+```
+
+### External access
+
+The app binds to `0.0.0.0` so it is accessible from other machines on port 5173. Ensure your firewall allows inbound traffic on that port.
+
 ## Scoring
 
 - **MedChem Score**: 1 (best) to 100 (worst). Derived deterministically from TCSP.

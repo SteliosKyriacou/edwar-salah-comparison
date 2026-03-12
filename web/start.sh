@@ -10,7 +10,7 @@ lsof -ti:5173 -ti:8000 2>/dev/null | xargs kill -9 2>/dev/null || true
 sleep 1
 
 echo "Starting backend on :8000..."
-conda run -n edward_salah uvicorn main:app --host 0.0.0.0 --port 8000 \
+conda run -n edwar-salah uvicorn main:app --host 0.0.0.0 --port 8000 \
   --app-dir "$DIR/backend" &
 BACKEND_PID=$!
 

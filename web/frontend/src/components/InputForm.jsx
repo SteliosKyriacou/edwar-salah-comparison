@@ -3,8 +3,8 @@ import React, { useState } from 'react'
 const EXAMPLES = [
   {
     label: 'Example: Success',
-    smiles: 'CC(C)c1n(CC[C@@H](O)C[C@@H](O)CC(O)=O)c(-c2ccc(F)cc2)c(-c2ccccc2)c1C(=O)Nc1ccccc1',
-    target: 'Enzyme',
+    smiles: 'CCOC(=O)[C@H](CCC1=CC=CC=C1)N[C@@H](C)C(=O)N2[C@H]3CCC[C@H]3C[C@H]2C(=O)O',
+    target: 'ACE inhibitor',
     indication: 'Cardiovascular',
   },
   {
