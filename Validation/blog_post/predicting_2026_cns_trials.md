@@ -4,13 +4,13 @@
 
 Central nervous system (CNS) drug development is notoriously difficult. Industry-wide, only about 6–8% of CNS drugs that enter Phase I eventually reach approval — the lowest success rate of any major therapeutic area. The blood-brain barrier, the complexity of neural circuits, the unreliability of animal models, and the subjectivity of cognitive endpoints all conspire to make neurology a graveyard for promising molecules.
 
-We applied **ReneuBio agentic pipeline**, a multi-agent LLM pipeline, to 19 late-stage CNS drug candidates currently in or recently completing Phase II/III trials. The goal: rank-order these candidates by their probability of clinical success and identify the structural, biological, and pharmacological factors that separate likely winners from likely failures.
+We applied **our agentic pipeline**, a multi-agent LLM pipeline, to 19 late-stage CNS drug candidates currently in or recently completing Phase II/III trials. The goal: rank-order these candidates by their probability of clinical success and identify the structural, biological, and pharmacological factors that separate likely winners from likely failures.
 
 ---
 
-## The ReneuBio agentic pipeline Pipeline
+## The our agentic pipeline Pipeline
 
-ReneuBio agentic pipeline is a four-agent system that evaluates drug candidates from complementary expert perspectives:
+our agentic pipeline is a four-agent system that evaluates drug candidates from complementary expert perspectives:
 
 1. **Biological-Rationalist (Salah)** — evaluates target validation, mechanism of action, and indication-level biological plausibility
 2. **Toxi-Predictive Toxicologist** — assesses structural alerts, off-target liabilities, therapeutic window, and safety signals
@@ -187,7 +187,7 @@ At the other end, **Nilotinib** and **Masitinib** — both repurposed kinase inh
 
 ## Methodology Note
 
-ReneuBio agentic pipeline uses Google Gemini 3 Pro Preview as its base LLM, running four specialized agent prompts in parallel via a ThreadPoolExecutor architecture. The system was validated on:
+our agentic pipeline uses Google Gemini 3 Pro Preview as its base LLM, running four specialized agent prompts in parallel via a ThreadPoolExecutor architecture. The system was validated on:
 
 - **Global dataset**: 394 historical small-molecule outcomes (AUC = 0.838)
 - **2025 holdout**: 29 prospective drug outcomes from the 2025 approval/failure cycle
@@ -199,4 +199,4 @@ Full code and data are available in the Edward-Salah repository.
 
 ---
 
-*Analysis performed March 2026 using ReneuBio agentic pipeline.*
+*Analysis performed March 2026 using our agentic pipeline.*
