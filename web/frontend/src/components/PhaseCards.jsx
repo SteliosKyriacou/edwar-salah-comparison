@@ -9,9 +9,9 @@ function probColor(p) {
 
 export default function PhaseCards({ overview }) {
   const phases = [
-    { name: 'Phase 1', prob: overview.final_p1, rationale: overview.final_p1_rationale },
-    { name: 'Phase 2', prob: overview.final_p2, rationale: overview.final_p2_rationale },
-    { name: 'Phase 3', prob: overview.final_p3, rationale: overview.final_p3_rationale },
+    { name: 'Probability of Success at Phase 1', prob: overview.final_p1, rationale: overview.final_p1_rationale },
+    { name: 'Probability of Success at Phase 2', prob: overview.final_p2, rationale: overview.final_p2_rationale },
+    { name: 'Probability of Success at Phase 3', prob: overview.final_p3, rationale: overview.final_p3_rationale },
   ]
 
   return (

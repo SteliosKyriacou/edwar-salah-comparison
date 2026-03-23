@@ -20,13 +20,6 @@ def _geolocate(ip: str) -> dict:
 
     fallback = {"country": "Unknown", "city": "Unknown", "lat": 0, "lon": 0}
 
-    # Skip private / loopback IPs
-    if ip.startswith(("127.", "10.", "192.168.", "172.")) or ip == "::1":
-        fallback["city"] = "Local"
-        fallback["country"] = "Local"
-        _geo_cache[ip] = fallback
-        return fallback
-
     try:
         url = f"http://ip-api.com/json/{ip}?fields=status,country,city,lat,lon"
         req = urllib.request.Request(url, headers={"User-Agent": "DrugPredictor/1.0"})

@@ -6,6 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 import os
+import time
+import math
 
 from agents import run_pipeline
 from logger import log_prediction
@@ -29,6 +31,32 @@ def _get_client_ip(request: Request) -> str:
     if not ip:
         ip = request.client.host if request.client else "unknown"
     return ip
+
+
+# --- Global rate limiter: 100 predictions per hour ---
+RATE_LIMIT = 100
+RATE_WINDOW = 3600  # seconds
+_prediction_timestamps: list = []
+
+
+def _check_rate_limit():
+    """Enforce global rate limit. Raises HTTPException if exceeded."""
+    now = time.time()
+    cutoff = now - RATE_WINDOW
+    # Prune old timestamps
+    while _prediction_timestamps and _prediction_timestamps[0] < cutoff:
+        _prediction_timestamps.pop(0)
+    if len(_prediction_timestamps) >= RATE_LIMIT:
+        oldest = _prediction_timestamps[0]
+        reset_in = math.ceil(oldest + RATE_WINDOW - now)
+        minutes = math.ceil(reset_in / 60)
+        raise HTTPException(
+            429,
+            f"We've reached the limit of {RATE_LIMIT} predictions per hour. "
+            f"Predictions will be available again in {minutes} minute{'s' if minutes != 1 else ''}. "
+            f"Thank you for your patience!",
+        )
+    _prediction_timestamps.append(now)
 
 
 class AnalyzeRequest(BaseModel):
@@ -55,6 +83,7 @@ def dashboard():
 
 @app.post("/api/analyze")
 def analyze(req: AnalyzeRequest, request: Request):
+    _check_rate_limit()
     if not req.smiles.strip():
         raise HTTPException(400, "SMILES is required")
     if not req.target.strip():

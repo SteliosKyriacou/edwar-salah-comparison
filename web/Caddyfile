@@ -1,0 +1,3 @@
+willyourdrugsucceedinclinic.stylianoskyriacou.ai {
+    reverse_proxy localhost:5173
+}

@@ -19,8 +19,9 @@ cd "$DIR/frontend" && npm run dev &
 FRONTEND_PID=$!
 
 echo ""
-echo "  App running at: http://localhost:5173"
-echo "  Backend API at: http://localhost:8000/api/health"
+echo "  App running at: https://willyourdrugsucceedintheclinic.stylianoskyriacou.ai"
+echo "  Dashboard:      https://willyourdrugsucceedintheclinic.stylianoskyriacou.ai/dashboard"
+echo "  Backend API:    http://localhost:8000/api/health"
 echo ""
 echo "  Press Ctrl+C to stop"
 

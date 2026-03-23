@@ -123,6 +123,10 @@ export default function App() {
           </div>
         )}
       </div>
+      <div className="contact-footer">
+        <span className="contact-label">Contact</span>
+        <a href="mailto:stelios@reneubio.com" className="contact-email">stelios@reneubio.com</a>
+      </div>
     </>
   )
 }
