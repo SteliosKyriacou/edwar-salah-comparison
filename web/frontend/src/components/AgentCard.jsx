@@ -28,7 +28,7 @@ export default function AgentCard({
             <div className="agent-sub">
               {isMedchem
                 ? 'Structural Assessment (Pass 1)'
-                : `${probKeys[0]?.split('_')[0]?.toUpperCase()} P1-P3`}
+                : 'Phase Assessment'}
             </div>
           </div>
         </div>
@@ -44,27 +44,14 @@ export default function AgentCard({
       {open && (
         <div className="agent-body">
           <div className="agent-probs">
-            {probKeys.map((key, i) => {
-              const val = data[key]
-              if (val == null) return null
-              const pct = Math.round(val * 100)
+            {probRationaleKeys.map((key, i) => {
+              if (!key || !data[key]) return null
               return (
                 <div className="agent-prob-item" key={key}>
                   <div className="prob-label">{probLabels[i]}</div>
-                  <div className="prob-value" style={{ color: probColor(val) }}>
-                    {pct}%
+                  <div className="agent-prob-rationale">
+                    {data[key]}
                   </div>
-                  <div className="prob-bar" style={{ margin: '6px 0' }}>
-                    <div
-                      className="prob-bar-fill"
-                      style={{ width: `${pct}%`, background: probColor(val) }}
-                    />
-                  </div>
-                  {probRationaleKeys[i] && data[probRationaleKeys[i]] && (
-                    <div className="agent-prob-rationale">
-                      {data[probRationaleKeys[i]]}
-                    </div>
-                  )}
                 </div>
               )
             })}

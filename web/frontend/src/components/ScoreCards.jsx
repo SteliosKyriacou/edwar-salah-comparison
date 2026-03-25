@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 function scoreColor(score) {
   if (score <= 20) return 'var(--accent-green)'
@@ -17,32 +17,17 @@ function scoreLabel(score) {
   return 'Critical'
 }
 
-function tcspLabel(tcsp) {
-  if (tcsp >= 0.25) return 'High'
-  if (tcsp >= 0.10) return 'Moderate'
-  if (tcsp >= 0.04) return 'Low'
-  return 'Very Low'
-}
-
 export default function ScoreCards({ overview }) {
+  const [rationaleOpen, setRationaleOpen] = useState(false)
   const score = overview.medchem_score
-  const tcsp = overview.tcsp
   const color = scoreColor(score)
 
   return (
     <div className="score-row">
       <div className="score-card" style={{ borderColor: color }}>
-        <div className="label">MedChem Score</div>
+        <div className="label">CDR Score</div>
         <div className="value" style={{ color }}>{score}</div>
         <div className="sub">{scoreLabel(score)} — lower is better</div>
-      </div>
-
-      <div className="score-card">
-        <div className="label">Clinical Success Probability</div>
-        <div className="value" style={{ color: 'var(--accent-orange)' }}>
-          {overview.tcsp_pct}%
-        </div>
-        <div className="sub">{tcspLabel(tcsp)} probability — P1 x P2 x P3</div>
       </div>
 
       <div className="score-card">
@@ -61,6 +46,11 @@ export default function ScoreCards({ overview }) {
             ? 'Addressable liabilities identified'
             : 'Significant structural concerns'}
         </div>
+      </div>
+
+      <div className="score-card rationale-card" onClick={() => setRationaleOpen(!rationaleOpen)} style={{ cursor: 'pointer' }}>
+        <div className="label">Consensus Rationale <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>(click to {rationaleOpen ? 'collapse' : 'expand'})</span></div>
+        <div className={`rationale-text ${rationaleOpen ? 'expanded' : ''}`}>{overview.rationale}</div>
       </div>
     </div>
   )

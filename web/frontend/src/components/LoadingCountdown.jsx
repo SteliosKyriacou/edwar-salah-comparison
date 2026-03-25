@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react'
 
-const ESTIMATE_SECONDS = 45
+const ESTIMATE_SECONDS = 79
 const STAGES = [
   { at: 0, label: 'Initializing agents...' },
-  { at: 3, label: 'Pass 1: 4 agents evaluating in parallel...' },
-  { at: 10, label: 'Biological-Rationalist analyzing target biology...' },
-  { at: 16, label: 'Toxi-Toxicologist assessing safety liabilities...' },
-  { at: 22, label: 'Pharma-Pharmacologist evaluating PK/PD...' },
-  { at: 28, label: 'MedChem-Rationalist structural critique...' },
-  { at: 34, label: 'Pass 2: Integrating all advisory data...' },
-  { at: 40, label: 'Computing consensus probabilities...' },
-  { at: 45, label: 'Almost there...' },
+  { at: 5, label: 'Pass 1: 4 agents evaluating in parallel...' },
+  { at: 15, label: 'Biological-Rationalist analyzing target biology...' },
+  { at: 25, label: 'Toxi-Toxicologist assessing safety liabilities...' },
+  { at: 35, label: 'Pharma-Pharmacologist evaluating PK/PD...' },
+  { at: 45, label: 'MedChem-Rationalist structural critique...' },
+  { at: 55, label: 'Pass 2: Integrating all advisory data...' },
+  { at: 65, label: 'Computing consensus probabilities...' },
+  { at: 74, label: 'Almost there...' },
 ]
 
 export default function LoadingCountdown() {
@@ -77,7 +77,7 @@ export default function LoadingCountdown() {
 
       <div className="loading-agents-row">
         {['Biology', 'Toxicology', 'Pharmacology', 'MedChem'].map((name, i) => {
-          const agentDone = elapsed > 8 + i * 6
+          const agentDone = elapsed > 15 + i * 10
           return (
             <div key={name} className={`loading-agent-chip ${agentDone ? 'done' : ''}`}>
               <span className="loading-agent-dot" />
