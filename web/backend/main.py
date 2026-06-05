@@ -33,6 +33,9 @@ def _get_client_ip(request: Request) -> str:
     return ip
 
 
+# --- IPs exempt from rate limiting and logging ---
+EXEMPT_IPS = {"136.119.133.178", "172.59.211.68", "172.59.214.44"}
+
 # --- Global rate limiter: 100 predictions per hour ---
 RATE_LIMIT = 100
 RATE_WINDOW = 3600  # seconds
@@ -83,7 +86,12 @@ def dashboard():
 
 @app.post("/api/analyze")
 def analyze(req: AnalyzeRequest, request: Request):
-    _check_rate_limit()
+    ip = _get_client_ip(request)
+    is_exempt = ip in EXEMPT_IPS
+
+    if not is_exempt:
+        _check_rate_limit()
+
     if not req.smiles.strip():
         raise HTTPException(400, "SMILES is required")
     if not req.target.strip():
@@ -101,10 +109,10 @@ def analyze(req: AnalyzeRequest, request: Request):
     except Exception as e:
         raise HTTPException(500, f"Pipeline error: {e}")
 
-    ip = _get_client_ip(request)
-    ua = request.headers.get("user-agent", "")
-    log_visit(ip, "/api/analyze", ua)
-    log_prediction(result)
+    if not is_exempt:
+        ua = request.headers.get("user-agent", "")
+        log_visit(ip, "/api/analyze", ua)
+        log_prediction(result)
     return result
 
 
