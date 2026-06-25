@@ -67,6 +67,7 @@ class AnalyzeRequest(BaseModel):
     target: str
     indication: str
     auxiliary: str = ""
+    web_search: bool = False
 
 
 @app.get("/api/health")
@@ -105,6 +106,7 @@ def analyze(req: AnalyzeRequest, request: Request):
             req.target.strip(),
             req.indication.strip(),
             req.auxiliary.strip(),
+            web_search=req.web_search,
         )
     except Exception as e:
         raise HTTPException(500, f"Pipeline error: {e}")

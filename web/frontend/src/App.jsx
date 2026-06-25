@@ -6,6 +6,8 @@ import PhaseCards from './components/PhaseCards'
 import AgentCard from './components/AgentCard'
 import StructuralFlags from './components/StructuralFlags'
 import LoadingCountdown from './components/LoadingCountdown'
+import FdaResponse from './components/FdaResponse'
+import WebSearchSummary from './components/WebSearchSummary'
 
 export default function App() {
   const [result, setResult] = useState(null)
@@ -57,6 +59,9 @@ export default function App() {
           <div ref={resultsRef}>
             <ScoreCards overview={result.overview} />
             <PhaseCards overview={result.overview} />
+
+            <FdaResponse fda={result.web_search?.fda} />
+            <WebSearchSummary webSearch={result.web_search} />
 
             <StructuralFlags overview={result.overview} />
 

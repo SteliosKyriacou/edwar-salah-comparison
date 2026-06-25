@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
+from web_search import run_web_search
+
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 load_dotenv(os.path.join(BASE, ".env"))
 
@@ -134,8 +136,23 @@ TASK: Integrate all advisories with your own Pass 1 assessment. Produce final co
     return parse_json(resp.content)
 
 
-def run_pipeline(smiles, target, indication, auxiliary=""):
-    """Run the full 4-agent V25 pipeline. Returns structured result dict."""
+def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
+    """Run the full 4-agent V25 pipeline. Returns structured result dict.
+
+    If web_search is True, a grounded literature search is run first and its
+    validated summary is appended to the auxiliary context fed to every agent.
+    """
+    web_search_result = None
+    if web_search:
+        ws = run_web_search(smiles, target, indication, auxiliary)
+        if ws and ws.get("summary"):
+            evidence = (
+                "Validated web-search literature summary (references provided):\n"
+                + ws["summary"]
+            )
+            auxiliary = f"{auxiliary}\n\n{evidence}" if auxiliary else evidence
+        web_search_result = ws
+
     with ThreadPoolExecutor(max_workers=4) as executor:
         fut_salah = executor.submit(run_salah, smiles, target, indication, auxiliary)
         fut_toxi = executor.submit(run_toxi, smiles, target, indication, auxiliary)
@@ -158,6 +175,7 @@ def run_pipeline(smiles, target, indication, auxiliary=""):
     score = tcsp_to_score(tcsp)
 
     return {
+        "web_search": web_search_result,
         "overview": {
             "medchem_score": score,
             "tcsp": tcsp,
