@@ -4,3 +4,9 @@ __pycache__/
 node_modules/
 web/frontend/dist/
 web/logs/
+Validation/Big-Ramil/add_reason.md
+Validation/Big-Ramil/run_classification.py
+Validation/Big-Ramil/add_route.md
+Validation/Big-Ramil/classify_route.py
+Validation/Big-Ramil/add_therapy_type.md
+Validation/Big-Ramil/classify_therapy.py

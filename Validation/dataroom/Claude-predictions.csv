@@ -1,0 +1,395 @@
+Smiles,Target,Indication,P(success)
+CNCCC(C1=CC=CC=C1)OC2=CC=C(C=C2)C(F)(F)F,Serotonin Transporter (SERT),Depression,0.103
+CN[C@H]1CC[C@H](C2=CC=CC=C12)C3=CC(=C(C=C3)Cl)Cl,Serotonin Transporter (SERT),Depression,0.089
+C1CNC[C@H]([C@@H]1C2=CC=C(C=C2)F)COC3=CC4=C(C=C3)OCO4,Serotonin Transporter (SERT),Depression,0.107
+CN(C)CCCC1(C2=C(CO1)C=C(C=C2)C#N)C3=CC=C(C=C3)F,Serotonin Transporter (SERT),Depression,0.102
+CN(C)CCC[C@@]1(C2=C(CO1)C=C(C=C2)C#N)C3=CC=C(C=C3)F,Serotonin Transporter (SERT),Depression,0.102
+COCCCC/C(=N\OCCN)/C1=CC=C(C=C1)C(F)(F)F,Serotonin Transporter (SERT),Depression,0.083
+CN(C)CC(C1=CC=C(C=C1)OC)C2(CCCCC2)O,SERT and Norepinephrine Transporter (NET),Depression,0.105
+CN(C)CC(C1=CC=C(C=C1)O)C2(CCCCC2)O,SERT and Norepinephrine Transporter (NET),Depression,0.104
+CNCC[C@@H](C1=CC=CS1)OC2=CC=CC3=CC=CC=C32,SERT and Norepinephrine Transporter (NET),Depression,0.096
+CCN(CC)C(=O)[C@]1(C[C@H]1CN)C2=CC=CC=C2,SERT and Norepinephrine Transporter (NET),Depression,0.103
+CCN(CC)C(=O)[C@@]1(C[C@@H]1CN)C2=CC=CC=C2,SERT and Norepinephrine Transporter (NET),Depression,0.103
+CC(C(=O)C1=CC(=CC=C1)Cl)NC(C)(C)C,NET and Dopamine Transporter (DAT),Depression,0.101
+CN1CCN2C(C1)C3=CC=CC=C3CC4=C2N=CC=C4,_2_-adrenergic and 5-HT2A/2C/3 receptors,Depression,0.097
+C1CN(CCN1CCCN2C(=O)N3C=CC=CC3=N2)C4=CC(=CC=C4)Cl,5-HT2A receptor and SERT,Depression,0.095
+C1CN(CCN1CCCCC2=CNC3=C2C=C(C=C3)C#N)C4=CC5=C(C=C4)OC(=C5)C(=O)N,SERT and 5-HT1A receptor,Depression,0.082
+CC1=CC(=C(C=C1)SC2=CC=CC=C2N3CCNCC3)C,"SERT, 5-HT1A/1B/3/7 receptors",Depression,0.106
+CN(C)CCC=C1C2=CC=CC=C2CCC3=CC=CC=C31,SERT and NET,Depression,0.101
+CNCCC=C1C2=CC=CC=C2CCC3=CC=CC=C31,SERT and NET,Depression,0.102
+CN(C)CCCN1C2=CC=CC=C2CCC3=CC=CC=C31,SERT and NET,Depression,0.102
+CN(C)CCCN1C2=CC=CC=C2CCC3=C1C=C(C=C3)Cl,SERT and NET,Depression/OCD,0.101
+CN(C)CCC=C1C2=CC=CC=C2COC3=CC=CC=C31,SERT and NET,Depression/Insomnia,0.141
+CC(CN1C2=CC=CC=C2CCC3=CC=CC=C31)CN(C)C,SERT and NET,Depression,0.102
+CNCCCC1C2=CC=CC=C2C=CC3=CC=CC=C13,SERT and NET,Depression,0.101
+CNCCCC12CCC(C3=CC=CC=C31)C4=CC=CC=C24,Norepinephrine Transporter (NET),Depression,0.102
+CCOC1=CC=CC=C1O[C@@H]([C@H]2CNCCO2)C3=CC=CC=C3,Norepinephrine Transporter (NET),Depression,0.105
+CC(=O)NCCC1=CC=CC2=C1C=C(C=C2)OC,MT1/MT2 and 5-HT2C receptors,Depression,0.105
+CN1C2=CC=CC=C2C(C3=C(S1(=O)=O)C=C(C=C3)Cl)NCCCCCCC(=O)O,Full MOA complex; affects glutamate/AMPA,Depression,0.053
+C1=CC=C(C=C1)CCNN,Monoamine Oxidase (MAO) A and B,Depression,0.072
+C1C(C1N)C2=CC=CC=C2,Monoamine Oxidase (MAO) A and B,Depression,0.091
+CC1=CC(=NO1)C(=O)NNCC2=CC=CC=C2,Monoamine Oxidase (MAO) A and B,Depression,0.084
+C[C@H](CC1=CC=CC=C1)N(C)CC#C,Monoamine Oxidase B (MAO-B),Parkinson/Depression,0.105
+CN[C@@]1(CCCCC1=O)C2=CC=CC=C2Cl,NMDA receptor,Depression,0.094
+C1=CC(=C(C(=C1)Cl)Cl)C2=C(N=C(N=N2)N)N,Voltage-gated Na+ channels,Epilepsy/Bipolar,0.161
+CCCC(CCC)C(=O)[O-],HDAC and Voltage-gated Na+ channels,Epilepsy/Bipolar,0.143
+C1=CC=C2C(=C1)C=CC3=CC=CC=C3N2C(=O)N,Voltage-gated Na+ channels,Epilepsy,0.156
+C1C2=CC=CC=C2N(C3=CC=CC=C3C1=O)C(=O)N,Voltage-gated Na+ channels,Epilepsy,0.159
+CC1(O[C@@H]2CO[C@@]3([C@H]([C@@H]2O1)OC(O3)(C)C)COS(=O)(=O)N)C,Na+ channels and GABA-A receptors,Epilepsy/Migraine,0.146
+C1CN(CCC1(C2=CC=C(C=C2)Cl)O)CCCC(=O)C3=CC=C(C=C3)F,Dopamine D2 receptor,Schizophrenia,0.111
+CN(C)CCCN1C2=CC=CC=C2SC3=C1C=C(C=C3)Cl,Dopamine D2 receptor,Schizophrenia,0.112
+C1CN(CCN1CCCN2C3=CC=CC=C3SC4=C2C=C(C=C4)C(F)(F)F)CCO,Dopamine D2 receptor,Schizophrenia,0.109
+C1CN(CCN1CCCN2C3=CC=CC=C3SC4=C2C=C(C=C4)Cl)CCO,Dopamine D2 receptor,Schizophrenia,0.112
+CN1CCN(CC1)C2=NC3=C(C=CC(=C3)Cl)NC4=CC=CC=C42,5-HT2A and D2 receptors,Schizophrenia,0.113
+CC1=CC2=C(S1)NC3=CC=CC=C3N=C2N4CCN(CC4)C,5-HT2A and D2 receptors,Schizophrenia/Bipolar,0.113
+C1CN(CCN1CCOCCO)C2=NC3=CC=CC=C3SC4=CC=CC=C42,Dopamine D2 and 5-HT2A receptors,Schizophrenia/Bipolar,0.113
+CC1=C(C(=O)N2CCCCC2=N1)CCN3CCC(CC3)C4=NOC5=C4C=CC(=C5)F,5-HT2A and D2 receptors,Schizophrenia,0.105
+CC1=C(C(=O)N2CCCC(C2=N1)O)CCN3CCC(CC3)C4=NOC5=C4C=CC(=C5)F,5-HT2A and D2 receptors,Schizophrenia,0.107
+C1CN(CCN1CCC2=C(C=C3C(=C2)CC(=O)N3)Cl)C4=NSC5=CC=CC=C54,5-HT2A and D2 receptors,Schizophrenia,0.108
+C1CC(=O)NC2=C1C=CC(=C2)OCCCCN3CCN(CC3)C4=C(C(=CC=C4)Cl)Cl,D2 partial agonist and 5-HT2A antagonist,Schizophrenia/Bipolar,0.103
+C1CN(CCN1CCCCOC2=CC3=C(C=C2)C=CC(=O)N3)C4=C5C=CSC5=CC=C4,D2 and 5-HT1A receptors,Schizophrenia/MDD adjunct,0.093
+CN(C)C(=O)NC1CCC(CC1)CCN2CCN(CC2)C3=C(C(=CC=C3)Cl)Cl,D3 and D2 receptors,Schizophrenia/Bipolar,0.101
+C1CC[C@H]([C@@H](C1)CN2CCN(CC2)C3=NSC4=CC=CC=C43)CN5C(=O)[C@H]6[C@@H]7CC[C@@H](C7)[C@H]6C5=O,D2 and 5-HT7 receptors,Schizophrenia/Bipolar,0.101
+CC(=O)C1=CC(=C(C=C1)OCCCN2CCC(CC2)C3=NOC4=C3C=CC(=C4)F)OC,D2 and 5-HT2A receptors,Schizophrenia,0.09
+CN1C[C@H]2[C@H](C1)C3=C(C=CC(=C3)Cl)OC4=CC=CC=C24,5-HT2A and D2 receptors,Schizophrenia/Bipolar,0.108
+CN1CCN2[C@H]3CCN(C[C@H]3C4=C2C1=CC=C4)CCCC(=O)C5=CC=C(C=C5)F,"5-HT2A and D2 receptors, SERT",Schizophrenia,0.109
+CCN1CCCC1CNC(=O)C2=CC(=C(C=C2OC)N)S(=O)(=O)CC,D2 and D3 receptors,Schizophrenia,0.098
+CCN1CCCC1CNC(=O)C2=C(C=CC(=C2)S(=O)(=O)N)OC,Dopamine D2 receptor,Schizophrenia,0.112
+C1CN(CCC1N2C3=CC=CC=C3NC2=O)CCCC(C4=CC=C(C=C4)F)C5=CC=C(C=C5)F,Dopamine D2 receptor,Schizophrenia/Tourette,0.079
+CCC1=C(NC2=C1C(=O)C(CC2)CN3CCOCC3)C,Dopamine D2 receptor,Schizophrenia,0.119
+CN1CCN(CC1)CC/C=C\2/C3=CC=CC=C3SC4=C2C=C(C=C4)S(=O)(=O)N(C)C,Dopamine D2 receptor,Schizophrenia,0.102
+C1CC[C@H]2[C@@H](C1)C(=O)N(C2=O)CCCCN3CCN(CC3)C4=NSC5=CC=CC=C54,D2 and 5-HT2A receptors,Schizophrenia,0.098
+COC(=O)C(C1CCCCN1)C2=CC=CC=C2,Dopamine transporter (DAT) and Norepinephrine transporter (NET),ADHD,0.088
+COC(=O)[C@@H]([C@H]1CCCCN1)C2=CC=CC=C2,DAT and NET (more active d-enantiomer),ADHD,0.088
+CC(CC1=CC=CC=C1)N,"DAT, NET, and Vesicular monoamine transporter 2 (VMAT2)",ADHD,0.056
+C[C@@H](CC1=CC=CC=C1)N,"DAT, NET, and VMAT2",ADHD,0.056
+C[C@@H](CC1=CC=CC=C1)NC(=O)[C@H](CCCCN)N,Prodrug converted to Dextroamphetamine (targeting DAT and NET),ADHD,0.08
+CC1=CC=CC=C1O[C@H](CCNC)C2=CC=CC=C2,Norepinephrine transporter (NET),ADHD,0.09
+C1=CC(=C(C(=C1)Cl)CC(=O)N=C(N)N)Cl,_2A_-adrenergic receptor,ADHD,0.08
+C1CN=C(N1)NC2=C(C=CC=C2Cl)Cl,"_2A_, _2B_, and _2C_-adrenergic receptors",ADHD/Hypertension,0.087
+C1=CC=C(C=C1)C(C2=CC=CC=C2)S(=O)CC(=O)N,DAT inhibition and modulation of glutamatergic/GABAergic circuits,Narcolepsy,0.092
+C1=CC=C(C=C1)C(C2=CC=CC=C2)[S@](=O)CC(=O)N,DAT inhibition (R-enantiomer of modafinil),Narcolepsy,0.092
+CC[C@@H](C(=O)N)N1CCCC1=O,Synaptic vesicle protein 2A (SV2A),Epilepsy,0.138
+CCC[C@@H]1CC(=O)N(C1)[C@@H](CC)C(=O)N,Synaptic vesicle protein 2A (SV2A),Epilepsy,0.158
+CC(=O)N[C@H](COC)C(=O)NCC1=CC=CC=C1,Slow inactivation of voltage-gated Na+ channels; also binds to CRMP2,Epilepsy,0.158
+C1=CC=C(C=C1)N2C=C(C=C(C2=O)C3=CC=CC=C3C#N)C4=CC=CC=N4,AMPA-type glutamate receptors,Epilepsy,0.098
+C1=CC=C2C(=C1)C(=NO2)CS(=O)(=O)N,Voltage-gated Na+ and T-type Ca2+ channels; carbonic anhydrase inhibition,Epilepsy,0.159
+C1CCC(CC1)(CC(=O)O)CN,_2__ subunit of voltage-gated Ca2+ channels,Epilepsy,0.15
+CC(C)C[C@@H](CC(=O)O)CN,_2__ subunit of voltage-gated Ca2+ channels,Epilepsy,0.147
+C1=CC=C(C=C1)C(COC(=O)N)COC(=O)N,NMDA receptor antagonist and GABA$_A receptor potentiation,Epilepsy,0.148
+CCC1(CC(=O)NC1=O)C,T-type voltage-gated Ca2+ channels,Epilepsy,0.14
+C1=CC=C(C=C1)C2(C(=O)NC(=O)N2)C3=CC=CC=C3,Voltage-gated Na+ channels (fast inactivation),Epilepsy,0.16
+CCC1(C(=O)NC(=O)NC1=O)C2=CC=CC=C2,GABA_A receptor (positive allosteric modulation),Epilepsy,0.158
+CCC1(C(=O)NCNC1=O)C2=CC=CC=C2,Converted to Phenobarbital (targeting GABA_A) and phenylethylmalonamide,Epilepsy,0.156
+C1=CC(=C(C(=C1)F)CN2C=C(N=N2)C(=O)N)F,Prolongation of the inactive state of voltage-gated Na+ channels,Epilepsy,0.164
+CN1C(=O)CC(=O)N(C2=C1C=CC(=C2)Cl)C3=CC=CC=C3,"GABA_A receptor (1,4-benzodiazepine structure)",Epilepsy,0.16
+C=CC(CCC(=O)O)N,GABA transaminase (irreversible inhibition),Epilepsy,0.129
+CC1=C(SC=C1)C(=CCCN2CCC[C@H](C2)C(=O)O)C3=C(C=CS3)C,GAT-1 GABA transporter,Epilepsy,0.128
+CC(C)(C)C(/C=C/C1=CC2=C(C=C1)OCO2)O,GABA_A receptor modulation and inhibition of CYP450 enzymes,Epilepsy,0.167
+C1[C@@H](C2=CC=CC=C2N(C3=CC=CC=C31)C(=O)N)O,Voltage-gated Na+ channels,Epilepsy,0.157
+COC1=C(C=C2C(=C1)CC(C2=O)CC3CCN(CC3)CC4=CC=CC=C4)OC,Acetylcholinesterase (AChE),Alzheimer disease,0.033
+CCN(C)C(=O)OC1=CC=CC(=C1)[C@H](C)N(C)C,Both Acetylcholinesterase and Butyrylcholinesterase,Alzheimer disease,0.035
+CN1CC[C@@]23C=C[C@@H](C[C@@H]2OC4=C(C=CC(=C34)C1)OC)O,Acetylcholinesterase (AChE) and allosteric modulation of Nicotinic ACh receptors,Alzheimer disease,0.021
+CC12CC3CC(C1)(CC(C3)(C2)N)C,"NMDA receptor (uncompetitive, moderate-affinity antagonist)",Alzheimer disease,0.012
+CC(C)COC1=CC=C(C=C1)CNC(=O)N(CC2=CC=C(C=C2)F)C3CCN(CC3)C,5-HT2A receptor (selective inverse agonist/antagonist),Parkinson psychosis,0.106
+C1=CC(=C(C=C1C[C@@H](C(=O)O)N)O)O,DOPA decarboxylase (substrate for conversion to dopamine),Parkinson disease,0.097
+C[C@](CC1=CC(=C(C=C1)O)O)(C(=O)O)NN,Aromatic L-amino acid decarboxylase (peripheral inhibition),Parkinson disease,0.06
+C1=CC(=C(C(=C1CNNC(=O)C(CO)N)O)O)O,Aromatic L-amino acid decarboxylase (peripheral inhibition),Parkinson disease,0.053
+CCCN[C@H]1CCC2=C(C1)SC(=N2)N,D3 receptor (higher affinity) and D2 receptor,Parkinson disease,0.103
+CCCN(CCC)CCC1=C2CC(=O)NC2=CC=C1,D2 receptor and D3 receptor,Parkinson disease,0.103
+CCCN(CCC1=CC=CS1)[C@H]2CCC3=C(C2)C=CC=C3O,"D1, D2, and D3 receptors",Parkinson disease,0.106
+CN1CCC2=C3[C@H]1CC4=C(C3=CC=C2)C(=C(C=C4)O)O,D1 and D2 receptors,Parkinson disease,0.099
+CCN(CC)C(=O)/C(=C/C1=CC(=C(C(=C1)O)O)[N+](=O)[O-])/C#N,Catechol-O-methyltransferase (COMT) (peripheral inhibition),Parkinson disease,0.072
+C#CCN[C@@H]1CCC2=CC=CC=C12,Monoamine Oxidase B (MAO-B) (irreversible inhibition),Parkinson disease,0.106
+CNS(=O)(=O)CC1=CC2=C(C=C1)NC=C2CCN(C)C,5-HT1B and 5-HT$D receptors,Migraine,0.154
+CN(C)CCC1=CNC2=C1C=C(C=C2)CN3C=NC=N3,5-HT1B and 5-HT$D receptors,Migraine,0.148
+CN(C)CCC1=CNC2=C1C=C(C=C2)C[C@H]3COC(=O)N3,5-HT1B and 5-HT$D receptors,Migraine,0.157
+CN1CCC[C@@H]1CC2=CNC3=C2C=C(C=C3)CCS(=O)(=O)C4=CC=CC=C4,5-HT1B and 5-HT$D receptors,Migraine,0.144
+CNS(=O)(=O)CCC1=CC2=C(C=C1)NC=C2C3CCN(CC3)C,5-HT1B and 5-HT$D receptors,Migraine,0.156
+CN(C)CCC1=CNC2=C1C=C(C=C2)CS(=O)(=O)N3CCCC3,5-HT1B and 5-HT$D receptors,Migraine,0.156
+CN[C@@H]1CCC2=C(C1)C3=C(N2)C=CC(=C3)C(=O)N,5-HT1B and 5-HT$D receptors,Migraine,0.147
+C[C@@H]1[C@@H](C[C@@H](C(=O)N1CC(F)(F)F)NC(=O)C2=CC3=C(C[C@@]4(C3)C5=C(NC4=O)N=CC=C5)N=C2)C6=CC=CC=C6,CGRP receptor,Migraine,0.117
+C1C[C@H](C2=C(C=CC=N2)[C@H]([C@@H]1C3=C(C(=CC=C3)F)F)N)OC(=O)N4CCC(CC4)N5C6=C(NC5=O)N=CC=C6,CGRP receptor,Migraine,0.107
+C[C@@H]1[C@@H](C[C@@H](C(=O)N1CC(F)(F)F)NC(=O)C2=CC3=C(C[C@@]4(C3)C5=C(NC4=O)N=CC=C5)N=C2)C6=C(C=CC(=C6F)F)F,CGRP receptor,Migraine,0.084
+CN1CCC(CC1)C(=O)C2=NC(=CC=C2)NC(=O)C3=C(C=C(C=C3F)F)F,5-HT1F receptor,Migraine,0.153
+CC1=CC=C(C=C1)C2=C(N3C=C(C=CC3=N2)C)CC(=O)N(C)C,GABA_A receptor (_1_-subunit selective PAM),Insomnia,0.134
+CN1CCN(CC1)C(=O)O[C@H]2C3=NC=CN=C3C(=O)N2C4=NC=C(C=C4)Cl,"GABA_A receptor (non-selective PAM at _1_,_2_,_3_,_5_)",Insomnia,0.136
+CCN(C1=CC=CC(=C1)C2=CC=NC3=C(C=NN23)C#N)C(=O)C,GABA_A receptor (_1_-subunit selective PAM),Insomnia,0.134
+C[C@@H]1CCN(CCN1C(=O)C2=C(C=CC(=C2)C)N3N=CC=N3)C4=NC5=C(O4)C=CC(=C5)Cl,OX1 and OX2 receptors,Insomnia,0.079
+CC1=NC(=NC=C1OC[C@]2(C[C@H]2C(=O)NC3=NC=C(C=C3)F)C4=CC(=CC=C4)F)C,OX1 and OX2 receptors,Insomnia,0.088
+CCC(=O)NCC[C@@H]1CCC2=C1C3=C(C=C2)OCC3,MT1 and MT2 receptors,Insomnia,0.145
+CCCCCCCCC1=CC=C(C=C1)CCC(CO)(CO)N,"Sphingosine-1-phosphate receptors (S1P1, S1P3, S1P4, S1P5)",Multiple sclerosis,0.069
+CCC1=C(C=CC(=C1)/C(=N/OCC2=CC(=C(C=C2)C3CCCCC3)C(F)(F)F)/C)CN4CC(C4)C(=O)O,S1P1 and S1P5 receptors,Multiple sclerosis,0.055
+CC(C)OC1=C(C=C(C=C1)C2=NC(=NO2)C3=C4CC[C@@H](C4=CC=C3)NCCO)C#N,S1P1 and S1P5 receptors,Multiple sclerosis,0.086
+C/C(=C(\C#N)/C(=O)NC1=CC=C(C=C1)C(F)(F)F)/O,Dihydroorotate dehydrogenase (DHODH),Multiple sclerosis,0.068
+COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,Activated Factor X (FXa),Anticoagulation,0.217
+C1COCC(=O)N1C2=CC=C(C=C2)N3C[C@@H](OC3=O)CNC(=O)C4=CC=C(S4)Cl,Activated Factor X (FXa),Anticoagulation,0.234
+CN1C2=C(C=C(C=C2)C(=O)N(CCC(=O)O)C3=CC=CC=N3)N=C1CNC4=CC=C(C=C4)C(=N)N,Thrombin (Factor IIa),Anticoagulation,0.153
+CN1CCC2=C(C1)SC(=N2)C(=O)N[C@@H]3C[C@H](CC[C@@H]3NC(=O)C(=O)NC4=NC=C(C=C4)Cl)C(=O)N(C)C,Activated Factor X (FXa),Anticoagulation,0.176
+CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)O,Vitamin K epoxide reductase complex subunit 1 (VKORC1),Anticoagulation,0.2
+CCOC(=O)C1=C(NC(=C(C1C2=CC=CC=C2Cl)C(=O)OC)C)COCCN,L-type voltage-gated calcium channels,Hypertension,0.108
+CC1=C(C(C(=C(N1)C)C(=O)OC)C2=CC=CC=C2[N+](=O)[O-])C(=O)OC,L-type voltage-gated calcium channels,Hypertension,0.108
+CCCCC1=NC(=C(N1CC2=CC=C(C=C2)C3=CC=CC=C3C4=NNN=N4)CO)Cl,Angiotensin II type 1 (AT1) receptor,Hypertension,0.136
+CCCCC(=O)N(CC1=CC=C(C=C1)C2=CC=CC=C2C3=NNN=N3)[C@@H](C(C)C)C(=O)O,Angiotensin II type 1 (AT1) receptor,Hypertension,0.119
+CCCC1=NC(=C(N1CC2=CC=C(C=C2)C3=CC=CC=C3C4=NNN=N4)C(=O)O)C(C)(C)O,Angiotensin II type 1 (AT1) receptor,Hypertension,0.131
+CCCC1=NC2=C(N1CC3=CC=C(C=C3)C4=CC=CC=C4C(=O)O)C=C(C=C2C)C5=NC6=CC=CC=C6N5C,Angiotensin II type 1 (AT1) receptor,Hypertension,0.093
+C1C[C@H](N(C1)C(=O)[C@H](CCCCN)N[C@@H](CCC2=CC=CC=C2)C(=O)O)C(=O)O,Angiotensin-converting enzyme (ACE),Hypertension,0.112
+CCOC(=O)[C@H](CCC1=CC=CC=C1)N[C@@H](C)C(=O)N2CCC[C@H]2C(=O)O,Angiotensin-converting enzyme (ACE),Hypertension,0.151
+CCOC(=O)[C@H](CCC1=CC=CC=C1)N[C@@H](C)C(=O)N2[C@H]3CCC[C@H]3C[C@H]2C(=O)O,Angiotensin-converting enzyme (ACE),Hypertension,0.148
+CC(C)NCC(COC1=CC=C(C=C1)CCOC)O,_1_-adrenergic receptor,Hypertension,0.144
+COC1=CC=CC=C1OCCNCC(COC2=CC=CC3=C2C4=CC=CC=C4N3)O,"_1_, _2_, and _1_-adrenergic receptors",Heart failure,0.067
+CC(C)NCC(COC1=CC=CC2=CC=CC=C21)O,_1_ and _2_-adrenergic receptors,Hypertension/Arrhythmia,0.128
+CC(C)C1=C(C(=C(N1CC[C@H](C[C@H](CC(=O)O)O)O)C2=CC=C(C=C2)F)C3=CC=CC=C3)C(=O)NC4=CC=CC=C4,HMG-CoA reductase,Dyslipidemia,0.095
+CC(C)C1=NC(=NC(=C1/C=C/[C@H](C[C@H](CC(=O)O)O)O)C2=CC=C(C=C2)F)N(C)S(=O)(=O)C,HMG-CoA reductase,Dyslipidemia,0.133
+CCC(C)(C)C(=O)O[C@H]1C[C@H](C=C2[C@H]1[C@H]([C@H](C=C2)C)CC[C@@H]3C[C@H](CC(=O)O3)O)C,HMG-CoA reductase,Dyslipidemia,0.191
+CN(C)C(=N)N=C(N)N,Mitochondrial respiratory-chain complex I and AMPK,T2D,0.102
+C1COC[C@H]1OC2=CC=C(C=C2)CC3=C(C=CC(=C3)[C@H]4[C@@H]([C@H]([C@@H]([C@H](O4)CO)O)O)O)Cl,Sodium-glucose co-transporter 2 (SGLT2),T2D,0.161
+CCOC1=CC=C(C=C1)CC2=C(C=CC(=C2)[C@H]3[C@@H]([C@H]([C@@H]([C@H](O3)CO)O)O)O)Cl,Sodium-glucose co-transporter 2 (SGLT2),T2D,0.166
+CC1=C(C=C(C=C1)[C@H]2[C@@H]([C@H]([C@@H]([C@H](O2)CO)O)O)O)CC3=CC=C(S3)C4=CC=C(C=C4)F,Sodium-glucose co-transporter 2 (SGLT2),T2D,0.157
+C1CN2C(=NN=C2C(F)(F)F)CN1C(=O)C[C@@H](CC3=CC(=C(C=C3F)F)F)N,Dipeptidyl peptidase-4 (DPP-4),T2D,0.163
+CC#CCN1C2=C(N=C1N3CCC[C@H](C3)N)N(C(=O)N(C2=O)CC4=NC5=CC=CC=C5C(=N4)C)C,Dipeptidyl peptidase-4 (DPP-4),T2D,0.147
+CN1C(=O)C=C(N(C1=O)CC2=CC=CC=C2C#N)N3CCC[C@H](C3)N,Dipeptidyl peptidase-4 (DPP-4),T2D,0.184
+CCCCCCCCCCC[C@@H](C[C@H]1[C@@H](C(=O)O1)CCCCCC)OC(=O)[C@H](CC(C)C)NC=O,Gastric and pancreatic lipases (inhibits dietary fat absorption),Obesity,0.032
+CCC1=CN=C(C=C1)CCOC2=CC=C(C=C2)CC3C(=O)NC(=O)S3,Peroxisome proliferator-activated receptor gamma (PPAR-_),T2D,0.113
+CCOC1=C(C=CC(=C1)CC(=O)N[C@@H](CC(C)C)C2=CC=CC=C2N3CCCCC3)C(=O)O,ATP-sensitive potassium (K-ATP channels on pancreatic beta cells,T2D,0.096
+CC(C)C1CCC(CC1)C(=O)N[C@H](CC2=CC=CC=C2)C(=O)O,ATP-sensitive potassium (K-ATP channels on pancreatic beta cells,T2D,0.151
+C1=CC(=CC=C1[C@@H]2[C@H](C(=O)N2C3=CC=C(C=C3)F)CC[C@@H](C4=CC=C(C=C4)F)O)O,Niemann-Pick C1-Like 1 (NPC1L1) cholesterol transporter,Dyslipidemia,0.142
+CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC,H+/K+-ATPase (Proton Pump),GERD/Ulcer,0.19
+CC1=CN=C(C(=C1OC)C)C[S@](=O)C2=NC3=C(N2)C=C(C=C3)OC,H+/K+-ATPase (Proton Pump),GERD/Ulcer,0.19
+CC1=C(C=CN=C1CS(=O)C2=NC3=CC=CC=C3N2)OCC(F)(F)F,H+/K+-ATPase (Proton Pump),GERD/Ulcer,0.188
+COC1=C(C(=NC=C1)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC(F)F)OC,H+/K+-ATPase (Proton Pump),GERD/Ulcer,0.181
+CC1=C(C=CN=C1CS(=O)C2=NC3=CC=CC=C3N2)OCCCOC,H+/K+-ATPase (Proton Pump),GERD/Ulcer,0.176
+C1=C(N=C(S1)N=C(N)N)CSCC/C(=N/S(=O)(=O)N)/N,Histamine H2 receptor,GERD/Ulcer,0.088
+CN/C(=C\[N+](=O)[O-])/NCCSCC1=CC=C(O1)CN(C)C,Histamine H2 receptor,GERD/Ulcer,0.111
+C1CN(CCC1N2C3=C(C=C(C=C3)Cl)NC2=O)CCCN4C5=CC=CC=C5NC4=O,Peripheral Dopamine D2 receptors,Gastroparesis,0.141
+CN(C)C(=O)C(CCN1CCC(CC1)(C2=CC=C(C=C2)Cl)O)(C3=CC=CC=C3)C4=CC=CC=C4,Peripheral _-opioid receptors,Diarrhea,0.113
+CCCCC([C@]1(CC[C@H]2[C@H](O1)CC(=O)[C@@H]2CCCCCCC(=O)O)O)(F)F,Chloride Channel-2 (ClC-2),Constipation,0.109
+CC(C)(C1=CC=CC=C1CC[C@H](C2=CC=CC(=C2)/C=C/C3=NC4=C(C=CC(=C4)Cl)C=C3)SCC5(CC5)CC(=O)O)O,Cysteinyl leukotriene receptor 1 (CysLT1),Asthma,0.058
+CC1=CC=CC=C1S(=O)(=O)NC(=O)C2=CC(=C(C=C2)CC3=CN(C4=C3C=C(C=C4)NC(=O)OC5CCCC5)C)OC,Cysteinyl leukotriene receptor 1 (CysLT1),Asthma,0.073
+CN1C2=C(C(=O)N(C1=O)C)NC=N2,Non-selective Phosphodiesterase (PDE) inhibition and Adenosine receptor antagonism,Asthma/COPD,0.07
+CC(C)(C)NCC(C1=CC(=C(C=C1)O)CO)O,_2_-adrenergic receptor,Asthma,0.116
+C1=CC=C(C=C1)CCCCOCCCCCCNCC(C2=CC(=C(C=C2)O)CO)O,_2_-adrenergic receptor,Asthma/COPD,0.067
+C[N+]1([C@@H]2CC(C[C@H]1[C@H]3[C@@H]2O3)OC(=O)C(C4=CC=CS4)(C5=CC=CS5)O)C,"M1, M2, and M3 muscarinic receptors (primarily M3 for bronchodilation)",COPD,0.084
+C1CC1COC2=C(C=CC(=C2)C(=O)NC3=C(C=NC=C3Cl)Cl)OC(F)F,Phosphodiesterase-4 (PDE4),COPD,0.096
+CC1([C@@H](N2[C@H](S1)[C@@H](C2=O)NC(=O)[C@@H](C3=CC=C(C=C3)O)N)C(=O)O)C,Penicillin-binding proteins (PBPs) (inhibits cell wall synthesis),Bacterial infection,0.213
+CC[C@@H]1[C@@]([C@@H]([C@H](N(C[C@@H](C[C@@]([C@@H]([C@H]([C@@H]([C@H](C(=O)O1)C)O[C@H]2C[C@@]([C@H]([C@@H](O2)C)O)(C)OC)C)O[C@H]3[C@@H]([C@H](C[C@H](O3)C)N(C)C)O)(C)O)C)C)C)O)(C)O,50S ribosomal subunit (inhibits bacterial protein synthesis),Bacterial infection,0.096
+C1CC1N2C=C(C(=O)C3=CC(=C(C=C32)N4CCNCC4)F)C(=O)O,DNA gyrase (Topoisomerase II) and Topoisomerase IV,Bacterial infection,0.253
+C[C@H]1COC2=C3N1C=C(C(=O)C3=CC(=C2N4CCN(CC4)C)F)C(=O)O,DNA gyrase (Topoisomerase II) and Topoisomerase IV,Bacterial infection,0.251
+COC1=C2C(=CC(=C1N3C[C@@H]4CCCN[C@@H]4C3)F)C(=O)C(=CN2C5CC5)C(=O)O,DNA gyrase (Topoisomerase II) and Topoisomerase IV,Bacterial infection,0.244
+C[C@@H]1[C@H]2[C@@H]([C@H]3[C@@H](C(=O)C(=C([C@]3(C(=O)C2=C(C4=C1C=CC=C4O)O)O)O)C(=O)N)N(C)C)O,30S ribosomal subunit (inhibits bacterial protein synthesis),Bacterial infection,0.114
+CC(=O)NC[C@H]1CN(C(=O)O1)C2=CC(=C(C=C2)N3CCOCC3)F,23S ribosomal RNA of the 50S subunit (prevents formation of initiation complex),Bacterial infection,0.253
+CCC(CC)O[C@@H]1C=C(C[C@@H]([C@H]1NC(=O)C)N)C(=O)OCC,Viral neuraminidase enzyme (prevents release of new virus particles),Influenza,0.173
+C1=NC2=C(N1COCCO)N=C(NC2=O)N,Viral DNA polymerase (causes chain termination),Herpes virus,0.148
+CN1CCN(CC1)CCCN2C3=CC=CC=C3SC4=C2C=C(C=C4)C(F)(F)F,Dopamine D2 receptor antagonist,Schizophrenia,0.108
+CN1CCN(CC1)C2=NC3=CC=CC=C3OC4=C2C=C(C=C4)Cl,Dopamine D2 receptor and 5-HT2A receptor antagonist,Schizophrenia,0.109
+CNCCCN1C2=CC=CC=C2CCC3=CC=CC=C31,Norepinephrine Transporter (NET),Depression,0.103
+CCCC(CCC)C(=O)O,GABA transaminase inhibition and Voltage-gated Na+ channels,Epilepsy; bipolar disorder,0.148
+CN1C(=O)CN=C(C2=C1C=CC(=C2)Cl)C3=CC=CC=C3,"GABA-A receptor (_1_,_2_,_3_,_5_ subunits) PAM",Anxiety; seizures; muscle spasm,0.162
+C1=CC=C(C(=C1)C2=NC(C(=O)NC3=C2C=C(C=C3)Cl)O)Cl,"GABA-A receptor (_1_,_2_,_3_,_5_ subunits) PAM",Anxiety; status epilepticus,0.167
+CC1=NN=C2N1C3=C(C=C(C=C3)Cl)C(=NC2)C4=CC=CC=C4,"GABA-A receptor (_1_,_2_,_3_,_5_ subunits) PAM",Anxiety/panic disorder,0.095
+C1C(=O)NC2=C(C=C(C=C2)[N+](=O)[O-])C(=N1)C3=CC=CC=C3Cl,"GABA-A receptor (_1_,_2_,_3_,_5_ subunits) PAM",Seizures; panic disorder,0.154
+CN1C2=C(C=C(C=C2)Cl)C(=NC(C1=O)O)C3=CC=CC=C3,"GABA-A receptor (_1_,_2_,_3_,_5_ subunits) PAM",Insomnia,0.143
+C1CCC2(C1)CC(=O)N(C(=O)C2)CCCCN3CCN(CC3)C4=NC=CC=N4,5-HT1A receptor partial agonist,Generalized anxiety disorder,0.088
+CC1=C(N(N=C1C(=O)NN2CCCCC2)C3=C(C=C(C=C3)Cl)Cl)C4=CC=C(C=C4)Cl,Cannabinoid CB1 receptor inverse agonist,Obesity,0.023
+CC(C)CC(C1(CCC1)C2=CC=C(C=C2)Cl)N(C)C,SERT and NET inhibition (SNRI),Obesity,0.086
+CC(C)(C)C1=CC=C(C=C1)C(CCCN2CCC(CC2)C(C3=CC=CC=C3)(C4=CC=CC=C4)O)O,Histamine H1 receptor,Allergy,0.089
+COC1=CC=C(C=C1)CCN2CCC(CC2)NC3=NC4=CC=CC=C4N3CC5=CC=C(C=C5)F,Histamine H1 receptor,Allergy,0.088
+CO[C@H]1CN(CC[C@H]1NC(=O)C2=CC(=C(C=C2OC)N)Cl)CCCOC3=CC=C(C=C3)F,5-HT4 receptor agonist,GI motility,0.134
+CCCCCN=C(N)N/N=C/C1=CNC2=C1C=C(C=C2)OC,5-HT4 receptor agonist,IBS-C,0.125
+CC1=CC(=C(C=C1)NC2=C(C=CC=C2Cl)F)CC(=O)O,Cyclooxygenase-2 (COX-2) enzyme,Pain/Arthritis,0.083
+CS(=O)(=O)C1=CC=C(C=C1)C2=C(C(=O)OC2)C3=CC=CC=C3,Cyclooxygenase-2 (COX-2) enzyme,Pain/Arthritis,0.068
+CC1=C(C(=NO1)C2=CC=CC=C2)C3=CC=C(C=C3)S(=O)(=O)N,Cyclooxygenase-2 (COX-2) enzyme,Pain/Inflammation,0.08
+CC(CC1=CC(=CC=C1)C(F)(F)F)NCCOC(=O)C2=CC=CC=C2,Indirect 5-HT2B receptor agonist (active metabolite),Metabolic syndrome,0.148
+CC(CN(C)C)C(C)(CC1=CC=C(C=C1)Cl)O,_ (Sigma) receptors and hERG (cause of withdrawal),Cough,0.066
+CN1CC(C2=C(C1)C(=CC=C2)N)C3=CC=CC=C3,DAT and NET inhibition,Depression,0.099
+CN(C)C/C=C(/C1=CC=C(C=C1)Br)\C2=CN=CC=C2,Serotonin Transporter (SERT),Depression,0.103
+C[C@@H]([C@@H](C1=CC=CC=C1)O)N,_1_ and _1_-adrenergic receptors,Appetite suppression/decongestant,0.082
+CC1CN(CCN1)C2=C(C=C3C(=C2)N(C=C(C3=O)C(=O)O)C4=C(C=C(C=C4)F)F)F,DNA gyrase and Topoisomerase IV,Infection,0.229
+CC1CN(CCN1)C2=C(C(=C3C(=C2)N(C=C(C3=O)C(=O)O)C4CC4)C)F,DNA gyrase and Topoisomerase IV,Infection,0.251
+C[C@@H]1CN(C[C@@H](N1)C)C2=C(C(=C3C(=C2F)N(C=C(C3=O)C(=O)O)C4CC4)N)F,DNA gyrase and Topoisomerase IV,Infection,0.23
+C1=CC=C(C=C1)C2C(=O)N=C(O2)N,Indirect Dopamine agonist (likely through DAT inhibition),ADHD,0.083
+CN1CCCCC1CCN2C3=CC=CC=C3SC4=C2C=C(C=C4)SC,Dopamine D2 receptor; also blocks hERG channels,Schizophrenia,0.073
+CC(CC(C1=CC=CC=C1)C2=CC=CC=C2)NC(C)(C)C,"M1, M2, and M3 muscarinic receptors and L-type Ca2+ channels",Urinary incontinence,0.126
+CC[C@@H](C(C[C@H](C)N(C)C)(C1=CC=CC=C1)C2=CC=CC=C2)O,_-opioid receptor,OUD,0.081
+CN1CCCCC1CCC2=CC=CC=C2NC(=O)C3=CC=C(C=C3)OC,Voltage-gated Na+ channels (State-dependent block),Arrhythmia,0.125
+CN1C=C(C(=O)C2=C1C=C(C=C2)F)S(=O)C,Voltage-gated Na+ channels and PDE inhibition,Heart failure,0.096
+CC(C)[C@H]1C2=C(CC[C@@]1(CCN(C)CCCC3=NC4=CC=CC=C4N3)OC(=O)COC)C=C(C=C2)F,T-type and L-type voltage-gated Ca2+ channels,Hypertension/angina,0.087
+CC1=C(C2=C(CCC(O2)(C)COC3=CC=C(C=C3)CC4C(=O)NC(=O)S4)C(=C1O)C)C,Peroxisome proliferator-activated receptor gamma (PPAR-_),T2D,0.107
+CCOC(=O)CN[C@H](C1CCCCC1)C(=O)N2CC[C@H]2C(=O)NCC3=CC=C(C=C3)/C(=N/O)/N,Thrombin (Factor IIa),Anticoagulation,0.122
+CC1=C(N=CN1)CN2CCC3=C(C2=O)C4=CC=CC=C4N3C,5-HT3 receptor,IBS-D,0.162
+CC1=CC=C(C=C1)C(=O)C2=CC(=C(C(=C2)O)O)[N+](=O)[O-],Catechol-O-methyltransferase (COMT) (Central and peripheral inhibition),Parkinson,0.09
+CC(C)C1=C(C(=C(C(=N1)C(C)C)COC)C2=CC=C(C=C2)F)/C=C/[C@H](C[C@H](CC(=O)O)O)O,HMG-CoA reductase,Dyslipidemia,0.146
+CC(C1=CC2=C(C=C1)OC(=N2)C3=CC=C(C=C3)Cl)C(=O)O,Cyclooxygenase (COX) enzymes and Lipoxygenase (LOX),Arthritis,0.113
+CCCC(C)(COC(=O)N)COC(=O)N,GABA-A receptor (likely at a site distinct from benzodiazepines),Anxiety,0.095
+CN(C)CC/C=C\1/C2=CC=CC=C2SC3=C1C=C(C=C3)Cl,Dopamine D2 receptor and 5-HT2 receptors,Psychosis,0.092
+CCOC(=O)/C=C(\C)/C=C/C=C(\C)/C=C/C1=C(C(=C(C=C1C)OC)C)C,Retinoic acid receptors (RARs),Psoriasis,0.05
+CCOC1=CC=C(C=C1)NC(=O)C,Cyclooxygenase (COX) enzymes (converted to Paracetamol),Pain,0.094
+CC1CN(CCN1)C2=C(C=C3C(=C2OC)N(C=C(C3=O)C(=O)O)C4CC4)F,DNA gyrase and Topoisomerase IV,Infection,0.248
+CC(C)COCC(CN(CC1=CC=CC=C1)C2=CC=CC=C2)N3CCCC3,L-type Ca2+ channels and Voltage-gated Na+ channels,Angina,0.113
+CN1C(S(=O)(=O)CCC1=O)C2=CC=C(C=C2)Cl,Specific molecular target poorly defined; produces GABAergic-like sedation,Spasm,0.074
+CC(C1=CC=C(C=C1)C(=O)C2=CC=CS2)C(=O)O,Cyclooxygenase (COX) enzymes,Pain,0.082
+CC1=C(N(C(=C1)CC(=O)O)C)C(=O)C2=CC=C(C=C2)Cl,Cyclooxygenase (COX) enzymes,Pain,0.083
+CCNC(C)CC1=CC(=CC=C1)C(F)(F)F,VMAT2 and 5-HT2B receptor,Obesity,0.061
+CCN[C@@H](C)CC1=CC(=CC=C1)C(F)(F)F,VMAT2 and 5-HT2B receptor,Obesity,0.061
+CCC1=NN(C(=O)N1CCOC2=CC=CC=C2)CCCN3CCN(CC3)C4=CC(=CC=C4)Cl,5-HT2A receptor antagonist and SERT inhibition,Depression,0.071
+CCOC(=O)NC1=C(N=C(C=C1)NCC2=CC=C(C=C2)F)N,Kv7 (KCNQ) potassium channels (Opener),Pain,0.086
+CCCN1C[C@@H](C[C@H]2[C@H]1CC3=CNC4=CC=CC2=C34)CSC,"D1, D2, and D3 receptors and 5-HT2B receptor",Parkinson,0.119
+C1CN(CCC1C2=CN(C3=C2C=C(C=C3)Cl)C4=CC=C(C=C4)F)CCN5CCNC5=O,"D2, 5-HT2A, and 5-HT2C receptors; also potent hERG channel blocker",Schizophrenia,0.083
+C1CN(CC=C1N2C3=CC=CC=C3NC2=O)CCCC(=O)C4=CC=C(C=C4)F,Dopamine D$_2$ receptor; also blocks hERG channels,Antiemetic / sedation,0.06
+CCC(=O)O[C@](CC1=CC=CC=C1)(C2=CC=CC=C2)[C@H](C)CN(C)C,_-opioid receptor; also inhibits hERG channels (reason for withdrawal),Pain,0.06
+CC1=NN=C2N1C3=C(C=C(C=C3)Cl)C(=NC2)C4=CC=CC=C4Cl,"GABA-A receptor (_1_,_2_,_3_,_5_ subunits) PAM",Insomnia,0.129
+CN1C(=O)CN=C(C2=C1C=CC(=C2)[N+](=O)[O-])C3=CC=CC=C3F,"GABA-A receptor (_1_,_2_,_3_,_5_ subunits) PAM",Insomnia,0.127
+CC1=CC=CC=C1N2C(=NC3=CC=CC=C3C2=O)C,GABA-A receptor (likely a distinct site from benzodiazepines),Insomnia (historical),0.129
+CCC1(CCC(=O)NC1=O)C2=CC=CC=C2,GABA-A receptor modulation,Insomnia (historical),0.136
+CCC1(C(=O)C(CNC1=O)C)CC,GABA-A receptor modulation,Insomnia (historical),0.128
+C1CNCCC1CCC2=CNC3=CC=CC=C32,Serotonin Transporter (SERT),Depression,0.102
+CCCN(CCC)C(=O)CC1=C(N=C2N1C=C(C=C2)Cl)C3=CC=C(C=C3)Cl,GABA-A receptor (_1_ subunit selective PAM),Anxiety,0.076
+C1=CC2=C(C(=C(C=C2Cl)I)O)N=C1,Metal ion chelator (zinc/copper); interferes with proteasome activity,GI infections (historical),0.201
+CCC(=O)O[C@](CC1=CC=CC=C1)(C2=CC=CC=C2)[C@H](C)CN(C)C,_-opioid receptor,Pain,0.075
+C1CC(=O)NC(=O)C1N2C(=O)C3=CC=CC=C3C2=O,Cereblon (CRBN) (part of an E3 ubiquitin ligase complex),Nausea/sedation historically,0.058
+CC(C)NCC(COC1=CC=C(C=C1)NC(=O)C)O,_1_-adrenergic receptor,CV,0.119
+CN(CC(=O)O)C(=S)C1=CC=CC2=C1C=CC(=C2C(F)(F)F)OC,Aldose reductase,Diabetic neuropathy,0.027
+C1=CC(=C(C(=C1)C(=O)C2=CC=C(C=C2)Br)N)CC(=O)O,Cyclooxygenase (COX) enzymes,Pain,0.075
+C1[C@@H]2[C@@H](C2N)CN1C3=C(C=C4C(=O)C(=CN(C4=N3)C5=C(C=C(C=C5)F)F)C(=O)O)F,DNA gyrase and Topoisomerase IV,Infection,0.228
+CC1=CC2=C(C=C1CC(=O)C3=C(C=CS3)S(=O)(=O)NC4=C(C(=NO4)C)Cl)OCO2,Endothelin A (ET-A) receptor,PAH,0.091
+C1CN(CC2=C1SC=C2)CC3=CC=CC=C3Cl,P2Y-12 receptor (irreversible ADP receptor antagonist),Stroke prevention,0.034
+CC(CC1=CC=C(C=C1)O)NCC(C2=CC(=CC(=C2)O)O)O,_2_-adrenergic receptor,Asthma,0.111
+CC1=NC=CN1CC2CCC3=C(C2=O)C4=CC=CC=C4N3C,5-HT3 receptor,Antiemetic,0.085
+CC[C@@H]1[C@@]([C@@H]([C@H](C(=O)[C@@H](C[C@@]([C@@H]([C@H]([C@@H]([C@H](C(=O)O1)C)O[C@H]2C[C@@]([C@H]([C@@H](O2)C)O)(C)OC)C)O[C@H]3[C@@H]([C@H](C[C@H](O3)C)N(C)C)O)(C)O)C)C)O)(C)O,50S ribosomal subunit; also Motilin receptor agonist,Infection,0.096
+CC[C@@H]1[C@@]([C@@H]([C@H](C(=O)[C@@H](C[C@@]([C@@H]([C@H]([C@@H]([C@H](C(=O)O1)C)O[C@H]2C[C@@]([C@H]([C@@H](O2)C)O)(C)OC)C)O[C@H]3[C@@H]([C@H](C[C@H](O3)C)N(C)C)O)(C)OC)C)C)O)(C)O,50S ribosomal subunit,Infection,0.096
+CCCCN(CCCC)CCC(C1=C2C=CC(=CC2=C3C=C(C=C(C3=C1)Cl)Cl)C(F)(F)F)O,Mechanism not fully clear; inhibits hemozoin formation,Malaria,0.057
+C1=CC(=CC=C1C(=N)N)OCCCCCOC2=CC=C(C=C2)C(=N)N,Binds to DNA minor groove; inhibits topoisomerases,"Pneumocystis, leishmaniasis",0.104
+CN(C1CCCCC1)C(=O)N2C=C(N=C2)C3=C[N+](=CC=C3)[O-],Fatty Acid Amide Hydrolase (FAAH) (Irreversible inhibitor),Pain,0.055
+CC(C)(C(=O)N1CC[C@@H]([C@@H]1CC2=C(C(=CC=C2)C3=CC(=CC(=C3)F)F)F)NS(=O)(=O)C)O,Orexin-2 (OX2) receptor,Narcolepsy,0.056
+CC1=CC(=CC(=C1C2=CC=CC(=C2)COC3=CC4=C(C=C3)[C@@H](CO4)CC(=O)O)C)OCCCS(=O)(=O)C,G protein-coupled receptor 40 (GPR40),T2D,0.057
+C1[C@H]2CSC(=N[C@]2(CO1)C3=C(C=CC(=C3)NC(=O)C4=NC=C(C=C4)F)F)N,_-site Amyloid Precursor Protein Cleaving Enzyme 1 (BACE1),Alzheimer,0.012
+C[C@]1(CO[C@@](C(=N1)N)(C)C(F)(F)F)C2=C(C=CC(=N2)NC(=O)C3=C(C=C(C=N3)C(F)(F)F)Cl)F,_-site Amyloid Precursor Protein Cleaving Enzyme 1 (BACE1),AD prevention,0.009
+C1CCC2(C1)C(=O)N([C@@H](CN2)C3=CC(=CC(=C3)F)F)CC(=O)NC4=CC5=C(C[C@@]6(C5)C7=C(NC6=O)N=CC=C7)C=C4,Calcitonin gene-related peptide (CGRP) receptor,Migraine,0.112
+CC1=CC(=CC(=C1O)C)C[C@H](C(=O)N2CCC(CC2)N3CCOCC3)OC(=O)N4CCC(CC4)N5CCC6=CC=CC=C6NC5=O,Calcitonin gene-related peptide (CGRP) receptor,Migraine,0.092
+CC[C@@H](C)NC1=NC(=NC2=C(C(=NN21)C)C3=C(N=C(C=C3)OC)C)C,Corticotropin-releasing factor receptor 1 (CRF$_1$),Depression,0.067
+CCCN(CCC)C1=CC(=NC2=C(C(=NN12)C)C3=CN=C(C=C3C)N(C)C)C,Corticotropin-releasing factor receptor 1 (CRF$_1$),Depression,0.062
+C[C@@H]([C@H](C1=CC=C(C=C1)O)O)N2CCC(CC2)(C3=CC=CC=C3)O,NMDA receptor GluN2B (NR2B) subunit,Neuropsychiatric,0.092
+CC(=O)NC1=NC2=C(C=CC=C2S1)OC3=NC=NC(=C3)C4=CC=C(C=C4)C(F)(F)F,Transient receptor potential vanilloid 1 (TRPV1),Pain,0.044
+CC(C)(C1=COC(=C1)S(=O)(=O)NC(=O)NC2=C3CCCC3=CC4=C2CCC4)O,NLRP3 inflammasome,Inflammatory disease,0.082
+CC1=C(C(=NC(=N1)N2CC(C2)[C@H]3CCCN(C3)C4CC(C4)(C)C(=O)O)N[C@H](C)C5=C(C=C(C=C5)Cl)Cl)Cl,C-C chemokine receptor type 4 (CCR4),Inflammatory disease,0.054
+CN1C=NC(=N1)COC(=O)N[C@H]2CCC3=C(C=CC(=C23)F)C(=O)NC4=CC(=C(C=C4)F)Cl,Hepatitis B virus (HBV) core protein,Hepatitis B,0.103
+C[C@@H]([C@@H](CC1=CC=C(C=C1)Cl)C2=CC=CC(=C2)C#N)NC(=O)C(C)(C)OC3=NC=C(C=C3)C(F)(F)F,Cannabinoid receptor 1 (CB1),Obesity,0.022
+CCNC1(CCN(CC1)C2=NC=NC3=C2N=C(N3C4=CC=C(C=C4)Cl)C5=CC=CC=C5Cl)C(=O)N,Cannabinoid receptor 1 (CB1),Obesity,0.026
+CC1=NOC(=C1NC(=O)O[C@H](C)C2=CC=CC=C2)C3=CC=C(C=C3)C4=CC=C(C=C4)C5(CC5)C(=O)O,Lysophosphatidic acid receptor 1 (LPA1),Idiopathic pulmonary fibrosis,0.027
+CC1=C(N=C(N1)NC(=O)C2=C(N=CC(=C2)CNC(=O)C(C)C)C(F)F)C3=CC=C(C=C3)C(F)(F)F,Microsomal prostaglandin E synthase-1 (mPGES-1),Pain,0.037
+CC(C)(C)C(=O)NCC1=CC(=C(C=C1)Cl)C(=O)NC2=NC=CN2,Microsomal prostaglandin E synthase-1 (mPGES-1),Pain,0.052
+CC(C)(C(=O)O)O/N=C(/C1=C(SC(=N1)N)Cl)\C(=O)N[C@H]2[C@@H]3N(C2=O)C(=C(CS3)C[N+]4=CN=C(C(=C4)NCCNC(=O)C5=CC(=O)C(=CN5O)O)N)C(=O)[O-],Bacterial Siderophore-Cephalosporin conjugate (targets cell wall),FIH volunteers,0.081
+CC1=C(N=C(O1)C2=CC=CC=C2)CCOC3=C4C=CSC4=C(C=C3)C[C@@H](C(=O)O)OC,Dual PPAR$\alpha$ and PPARgamma receptors,T2D,0.078
+CCO[C@H](CC1=CC=C(C=C1)OCCN2C3=CC=CC=C3OC4=CC=CC=C42)C(=O)O,Dual PPARalpha and PPAR$\gamma$ receptors,T2D,0.085
+C1CO[C@@H]1CN2C3=C(C=CC(=C3)C(=O)O)N=C2CN4CCC(CC4)C5=NC(=CC=C5)OCC6=C(C=C(C=C6)C#N)F,Glucagon-like peptide-1 (GLP-1) receptor,Obesity/T2D,0.059
+C[C@@]1(OC2=CC=CC(=C2O1)C3CCN(CC3)CC4=NC5=C(N4C[C@@H]6CCO6)C=C(C=C5)C(=O)O)C7=NC=C(C=C7)Cl,Glucagon-like peptide-1 (GLP-1) receptor,Obesity/T2D,0.052
+CC1=CC(=CN=C1)C2=NN=C(N2C3=C(C=CC=C3OC)OC)NS(=O)(=O)[C@@H](C)[C@H](C)C4=NC=C(C=N4)C,Apelin receptor (APJ),Heart Failure (HFrEF),0.047
+CC(=CC[C@@H]1[C@@](O1)(C)[C@H]2[C@@H]([C@@H](CC[C@]23CO3)OC(=O)/C=C/C4=CC=C(C=C4)OCCN(C)C)OC)C,Methionine aminopeptidase 2 (MetAP2),Obesity/PWS,0.026
+CC(=CC[C@@H]1[C@@](O1)(C)[C@H]2[C@@H]([C@@H](CC[C@]23CO3)OC(=O)N4CC(C4)CCN5CCOCC5)OC)C,Methionine aminopeptidase 2 (MetAP2),Obesity/Diabetes,0.041
+CCCN1CCN(CC1)C2=CC=C(C=C2)C(=O)NC3(CCCCC3)C(=O)NCC#N,Cathepsin K enzyme,Osteoporosis,0.104
+COC1=CC2=C(C(=CN=C2C=C1)F)[C@H](CC[C@@H]3CCN(C[C@@H]3C(=O)O)CCSC4=CC=CS4)O,Bacterial Type II Topoisomerases,Antibiotic,0.127
+CC1(CCN(CC1)C(=O)NC2=NC3=C(C=CC(=C3S2)N4CCOCC4)OC)O,Adenosine A2A receptor,Parkinson,0.077
+C[C@@H](C(=O)N[C@H]1C2=CC=CC=C2CCN(C1=O)C)NC(=O)[C@H](C(C)C)O,_-secretase complex,Alzheimer,0.011
+C1=CC(=CC=C1S(=O)(=O)N(CC2=C(C=C(C=C2)C3=NOC=N3)F)[C@H](CCC(F)(F)F)C(=O)N)Cl,_-secretase complex,Alzheimer,0.008
+C[C@]1(CCSC(=N1)N)C2=C(C=C(C(=C2)C3=CN=CN=C3)F)F,_-site Amyloid Precursor Protein Cleaving Enzyme 1 (BACE1),Alzheimer,0.012
+CNC(=O)[C@@H](C1=CC=CC=C1)N2CCC3=CC(=C(C=C3[C@@H]2CCC4=CC=C(C=C4)C(F)(F)F)OC)OC,Orexin-1 and Orexin-2 (OX1/OX2) receptors,Insomnia,0.059
+C1CN2CCC1[C@H](C2)NC(=O)C3=CC4=C(S3)C(=CC=C4)Cl,_7_ nicotinic acetylcholine receptor,Cognitive impairment in schizophrenia,0.045
+CC1=C2[C@@H]([C@H]3[C@@]4([C@H](C[C@@H]5[C@]([C@H]4[C@@H]([C@@](C2(C)C)(C[C@@H]1OC(=O)[C@@H]([C@H](CC(C)C)NC(=O)OC(C)(C)C)O)O)OC(=O)C6=CC=CC=C6)(CO5)OC(=O)C)OC(O3)C=C)C)OC(=O)C,Microtubules (taxane derivative),Alzheimer,0.011
+CCCN1C2=C(C(=O)N(C1=O)CCC)NC(=N2)C34C[C@@H]5C[C@H](C3)CC4C5,Adenosine A1 receptor,Heart failure,0.072
+C1COCCN1C(=O)C2=CC3=NON=C3C=C2,AMPA-type glutamate receptors (Positive Allosteric Modulator),CNS disorders,0.058
+C[C@@H]1CC2=CC3=C(C=C2C(=NN1C(=O)C)C4=CC=C(C=C4)N)OCO3,AMPA-type glutamate receptors (Non-competitive antagonist),Epilepsy,0.112
+CCN1C(=NC=N1)COC2=NN3C(=NN=C3C4=CC=CC=C4F)C=C2C(C)(C)C,GABA-A receptor (_2_/_3_ subunit selective),Schizophrenia,0.097
+C[C@@H]1CN(C[C@H]1C2=NC3=C(C=NN3C4CCOCC4)C(=O)N2)CC5=NC=CC=N5,Phosphodiesterase-9 (PDE9),Alzheimer,0.02
+C1CN(CCN1)C2=CC=CC3=CC(=CN=C32)S(=O)(=O)C4=CC=CC=C4,5-HT6 receptor,Alzheimer,0.031
+C1C2CC3CN(C2)CC1C3OC4=NN=C(S4)C5=CC=CC=C5,_7_ nicotinic acetylcholine receptor,Alzheimer,0.022
+C[C@]1(CS(=O)(=O)N(C(=N1)N)C)C2=C(C=CC(=C2)NC(=O)C3=NC=C(C=C3)F)F,_-site Amyloid Precursor Protein Cleaving Enzyme 1 (BACE1),Alzheimer disease,0.011
+CCCCC1=NC(=CN1C2=CC=C(C=C2)OC3=CC=C(C=C3)Cl)C4=CC=C(C=C4)OCCCN(CC)CC,Receptor for Advanced Glycation End-products (RAGE),Alzheimer,0.005
+CC1=NC(=C(C(=N1)N2CCN3CCOC[C@@H]3C2)F)NNC(=O)[C@H](CC4CCCC4)CN(C=O)O,Bacterial Peptide Deformylase (PDF),Antibacterial,0.153
+CC[C@@H](/C=C/C(=O)N1CCC2=CC=CC=C21)NC(=O)C3(CCOCC3)N,Neutrophil Elastase,Bronchiectasis,0.13
+CCOC1=NC=C(C=C1)C2=CC=C(C=C2)CN3C4=C(C=C(C=C4)OCC5=NC=C(C=C5)C)C(=C3CC(C)(C)C(=O)O)SC(C)(C)C,5-Lipoxygenase-activating protein (FLAP),Asthma,0.045
+CC1=NS(=O)(=O)C2=C(N1)C=CC(=C2)Cl,ATP-sensitive Potassium (K-ATP) channels,Depression,0.089
+C1CCC(CC1)C(CC2CCCCN2)C3CCCCC3,Carnitine Palmitoyltransferase 1 and 2 (CPT-1/2),Angina,0.087
+CC1(CC2=C(O1)C(=CC(=C2)Cl)C(=O)NC3C[C@H]4CC[C@@H](C3)N4C)C,5-HT3 receptor,Migraine,0.157
+CN(CCCN1CCC2=CC(=C(C=C2CC1=O)OC)OC)CCC3=CC(=C(C=C3)OC)OC,HCN channels (Hyperpolarization-activated cyclic nucleotide-gated),Angina,0.075
+COC1=C(C=C(C=C1)C(=O)N2CCN(CC2)C3=CC4=C(C=C3)NC(=O)CC4)OC,Voltage-gated K+ channels and PDE3 inhibition,Heart failure,0.094
+COC1=C(C=C(C=C1)CCO[C@@H]2CCCC[C@H]2N3CC[C@H](C3)O)OC,Atrial-selective K+ channels (IKur_) and Voltage-gated Na+ channels,AF,0.086
+C1=CC(=CC(=C1)OCC(C(F)F)(F)F)CNCCC2=CNC3=C2C=CC(=C3)F,5-HT6 receptor,Alzheimer disease,0.025
+C1CN(CCN1)C2=CC=CC3=CC(=CN=C32)S(=O)(=O)C4=CC=CC=C4,5-HT6 receptor,Alzheimer disease/DLB,0.031
+CN1C(=C(C=N1)Br)C2=C(C=CC(=C2)NC(=O)NC3=C(C=C(C=C3)F)F)OC,5-HT2A receptor,DLB,0.029
+C[C@H]([C@@H](C(=O)N1CCC[C@H]1C(=O)N2CCC[C@H]2C(=O)N[C@@H]([C@@H](C)O)C(=O)N)N)O,NMDA receptor (GLyx-13; functional partial agonist at glycine site),MDD,0.022
+C[C@H]([C@@H](C(=O)N1CCC[C@H]1C(=O)N2CCC[C@@]2(CC3=CC=CC=C3)C(=O)N[C@@H]([C@@H](C)O)C(=O)N)N)O,NMDA receptor (Glycine site partial agonist),MDD,0.019
+C1COCCC1N2C3=C(C=N2)C(=O)NC(=N3)CC4=CC=CC=N4,Phosphodiesterase-9 (PDE9),Schizophrenia (cognition),0.043
+CC(C)S(=O)(=O)N[C@H]1COC[C@H]1OC2=CC=C(C=C2)C3=CC=C(S3)C#N,AMPA-type glutamate receptors (Positive Allosteric Modulator),Cognitive impairment/schizophrenia,0.043
+CCCCOCCOC1=CC=C(C=C1)C2=CC/3=C(C=C2)N(CCC/C(=C3)/C(=O)NC4=CC=C(C=C4)[S@@](=O)CC5=CN=CN5CCC)CC(C)C,C-C chemokine receptors type 2 and 5 (CCR2/CCR5),NASH,0.02
+CC1=C(C=C(C=C1F)C(=O)NC2CC2)C3=NC=C(C=C3)C(=O)NCC(C)(C)C,p38 Mitogen-activated protein kinase,DMD/COPD/MI (various),0.115
+CCC1=C(C2=C(N1CC3=CC=CC=C3)C=CC=C2OCC(=O)O)C(=O)C(=O)N,Secretory Phospholipase A2 (sPLA2),ACS,0.057
+CCN(CC)CCN(CC1=CC=C(C=C1)C2=CC=C(C=C2)C(F)(F)F)C(=O)CN3C4=C(CCC4)C(=O)N=C3SCC5=CC=C(C=C5)F,Lipoprotein-associated Phospholipase A2 (Lp-PLA2),Atherosclerosis,0.032
+CC[C@@H]1C[C@@H](C2=C(N1C(=O)OCC)C=CC(=C2)C(F)(F)F)N(CC3=CC(=CC(=C3)C(F)(F)F)C(F)(F)F)C(=O)OC,Cholesteryl ester transfer protein (CETP),Dyslipidemia / cardiovascular risk reduction,0.038
+CCC(CC)CC1(CCCCC1)C(=O)NC2=CC=CC=C2SC(=O)C(C)C,Cholesteryl ester transfer protein (CETP),Dyslipidemia,0.06
+CC1=CC(=C2C(=C1)[C@H](CCCN2CC3CCC(CC3)C(=O)O)N(CC4=CC(=CC(=C4)C(F)(F)F)C(F)(F)F)C5=NN(N=N5)C)C,Cholesteryl ester transfer protein (CETP),Dyslipidemia,0.037
+C1C[C@H](N2[C@H](C1)SCC[C@@H](C2=O)NC(=O)[C@H](CC3=CC=CC=C3)S)C(=O)O,Angiotensin-converting enzyme (ACE) and Neprilysin (NEP),Hypertension/HF,0.152
+C1CN(CC2=C1N(C3=C2C=C(C=C3)F)CC(=O)O)C(=O)C4=CC=CC5=CC=CC=C54,Prostaglandin D2 receptor 2 (DP2 / CRTH2),Asthma/allergy,0.101
+CC1=C(C2=C(N1CC3=C(C=C(C=C3)S(=O)(=O)C)C(F)(F)F)N=CC=C2)CC(=O)O,Prostaglandin D2 receptor 2 (DP2 / CRTH2),Asthma,0.107
+CC(C)C1=NN2C=CC=CC2=C1C(=O)C(C)C,Phosphodiesterase-4 (PDE4) and TLR4,MS/ALS (various),0.078
+CC1=CC2=C(C=C1)N(C3=C2CN(CC3)C)CCC4=CN=C(C=C4)C,"Histamine H1, 5-HT6 receptors and mitochondrial permeability transition pore",Alzheimer disease,0.03
+CN(C)[C@H]1[C@@H]2C[C@@H]3CC4=C(C=CC(=C4C(=C3C(=O)[C@@]2(C(=C(C1=O)C(=O)N)O)O)O)O)N(C)C,Bacterial 30S ribosome,Neurodegeneration (various),0.05
+CC1=CC=C(C=C1)COC(=O)N2CC[C@@H]([C@@H](C2)F)CNC3=NC=CC=N3,NMDA receptor GluN2B (NR2B) subunit,MDD,0.095
+C1CN2CCC1[C@@H](C2)NC(=O)C3=NNC4=CC=CC=C43.Cl,_7_ nicotinic acetylcholine receptor,Schizophrenia cognition,0.044
+CCCN[C@@H]1CCC2=C(C1)SC(=N2)N,Mitochondrial bioenergetics (mechanism complex; non-dopaminergic),ALS,0.097
+CCN(C1=CC=CC=C1)C(=O)C2=C(C3=C(C=CC=C3Cl)N(C2=O)C)O,Aryl hydrocarbon receptor (AhR),Multiple sclerosis,0.093
+CCN1C2=C(C(=O)N(C1=O)CC)N(C(=N2)/C=C/C3=CC(=C(C=C3)OC)OC)C,Adenosine A2A receptor,Parkinson disease,0.071
+CC1=CN=C(C=C1)S(=O)(=O)NC2=C(C(=NC(=N2)C3=CC(=NC=C3)C4=NNN=N4)OCCO)OC5=CC=CC=C5OC,Endothelin A (ET-A) receptor,SAH vasospasm,0.011
+CC1=C2C=C(C=CC2=C(C(=N1)C(=O)NCC(=O)O)O)OC3=CC=CC=C3,HIF prolyl-hydroxylase,Anemia,0.095
+CC(C)(CC1=CNC2=CC=CC=C21)NCC(COC3=CC=CC=C3C#N)O,B1 and B2-adrenergic receptors,HF,0.112
+CC(C)C1=C(C=C(C=C1)C(=O)N=C(N)N)S(=O)(=O)C,Sodium-hydrogen exchanger 1 (NHE-1),MI/cardioprotection,0.094
+CCCCCCOC1=NSN=C1C2=CCCN(C2)C,M1 and M4 muscarinic receptors,Schizophrenia/AD,0.109
+CC#CC1=CC(=CN=C1)C2=CC3=C(CC4([C@]35N=C(C(=N5)N)C)CCC(CC4)OC)C=C2,b-site Amyloid Precursor Protein Cleaving Enzyme (BACE1/2),Alzheimer disease,0.011
+C[C@]1(C=CSC(=N1)N)C2=C(C=CC(=C2)NC(=O)C3=NC=C(C=C3)C#N)F,b-site Amyloid Precursor Protein Cleaving Enzyme (BACE1),Alzheimer disease,0.012
+C[C@@H]1[C@H]2CSC(=N[C@]2(CO1)C3=C(C=CC(=C3)NC(=O)C4=NC=C(N=C4)C(F)F)F)N,b-site Amyloid Precursor Protein Cleaving Enzyme (BACE),Alzheimer disease,0.011
+C[C@H](C1=CC(=C(C=C1)C2=CC=CC=C2)F)C(=O)O,g-secretase complex (selective modulation),Mild Alzheimer disease,0.012
+C(CN)CS(=O)(=O)O,Amyloid-beta (A-beta) monomers (prevents aggregation),Alzheimer disease,0.022
+C[C@@H](C(F)(F)F)OC1=C(C=C(C=C1)S(=O)(=O)C)C(=O)N2CCN(CC2)C3=C(C=C(C=N3)C(F)(F)F)F,Glycine Transporter 1 (GlyT1),Negative symptoms / sub-optimally controlled symptoms of schizophrenia,0.059
+C1[C@]([C@@H]2[C@H]([C@@H]2S1(=O)=O)C(=O)O)(C(=O)O)N,Metabotropic glutamate receptors 2 and 3 (mGluR2/3),Schizophrenia,0.06
+COCCOC1=CC=C(C=C1)N2CCN(CC2)CCN3C4=C(C=N3)C5=NC(=NN5C(=N4)N)C6=CC=CO6,Adenosine A2A receptor,"Parkinson disease (motor symptoms, adjunct)",0.051
+CC1=C(C(C(=C(N1)C)C(=O)OC(C)C)C2=CC=CC3=NON=C32)C(=O)OC,L-type voltage-gated Ca2+ channels (investigated for Parkinson's),Disease modification in early Parkinson,0.095
+CC(C)(C)/[N+](=C/C1=C(C=C(C=C1)S(=O)(=O)[O-])S(=O)(=O)[O-])/[O-].[Na+].[Na+],Free radicals (nitrone spin trap),Acute ischemic stroke,0.008
+C[C@@H]1C[C@H]2[C@@H]3CCC4=CC(=O)C=C[C@@]4(C3=CC[C@@]2([C@H]1C(=O)CN5CCN(CC5)C6=NC(=NC(=C6)N7CCCC7)N8CCCC8)C)C,Lipid peroxyl radicals (21-aminosteroid),Acute ischemic stroke / CNS injury,0.005
+C1=CC=C(C=C1)NC(=O)/C=C/C2=C(NC3=C2C(=CC(=C3)Cl)Cl)C(=O)O,NMDA receptor glycine binding site,Acute stroke neuroprotection,0.012
+CCC1=CC(=CC=C1)N(C)C(=NC2=CC=CC3=CC=CC=C32)N,NMDA receptor ion channel (non-competitive),Acute ischemic stroke,0.014
+C1CN[C@@H](C[C@@H]1CP(=O)(O)O)C(=O)O,NMDA receptor (competitive antagonist),Acute ischemic stroke / TBI,0.012
+C1C[C@H](C(=O)N(C[C@@H]1C2=C(C(=CC=C2)F)F)CC(F)(F)F)NC(=O)N3CCC(CC3)N4C5=C(NC4=O)N=CC=C5,Calcitonin gene-related peptide (CGRP) receptor,Acute migraine,0.113
+C1=C(C(=O)NC(=O)N1[C@H]2[C@H]([C@@H]([C@H](O2)CO)O)F)I,Viral DNA polymerase (halted due to severe mitochondrial toxicity),Hepatitis B,0.093
+CC(C)[C@H]1C2=C(CC[C@@]1(CCN(C)CCCC3=NC4=CC=CC=C4N3)OC(=O)COC)C=C(C=C2)F.Cl.Cl,T-type and L-type voltage-gated Ca2+ channels,Hypertension,0.087
+CCNC(=O)OC1CCN(CC1)C2=NN=CC3=CC(=C(C=C32)OC)OC,Phosphodiesterase (PDE) enzymes,Heart failure,0.095
+COC1=CC(=C(C=C1C=C)C(=O)NC2=CC=C(C=C2)C(=N)N)C3=C(N=C(C=C3)C(=O)NCC4CC4)C(=O)O,Plasma Kallikrein,Hereditary angioedema,0.057
+C1CN(CCC1N2CC3=CC=CC=C3NC2=O)C(=O)N[C@H](CC4=CC(=C(C(=C4)Br)O)Br)C(=O)N[C@@H](CCCCN)C(=O)N5CCN(CC5)C6=CC=NC=C6,Calcitonin gene-related peptide (CGRP) receptor,Migraine,0.06
+COC1=CN=C(C2=C1C(=CN2)C(=O)C(=O)N3CCN(CC3)C(=O)C4=CC=CC=C4)OC,HIV-1 gp120 protein,HIV infection,0.117
+C1CC1/C=C/[C@]2(C3=C(C=CC(=C3)Cl)NC(=O)N2)C(F)(F)F,HIV-1 Reverse Transcriptase (Non-nucleoside),HIV infection,0.181
+CC(C)C[C@@H]([C@@H]([C@H](CC1CCCCC1)NC(=O)[C@H](CC2=CN=CN2)NC(=O)[C@H](CC3=CC=C(C=C3)OC)NC(=O)CC(C)(C)N)O)O,Renin,Hypertension,0.03
+CC(C)(C)S(=O)(=O)C[C@@H](CC1=CC=CC=C1)C(=O)N[C@@H](CC2=CN=CN2)C(=O)N[C@@H](CC3CCCCC3)[C@H]([C@H](C4CC4)O)O,Renin,Hypertension,0.03
+CC(C)C[C@@H]([C@@H]([C@H](CC1CCCCC1)NC(=O)[C@H](CC2=CSC=N2)NC(=O)[C@H](CC3=CC=CC=C3)CS(=O)(=O)N4CCN(CC4)C)O)O,Renin,Hypertension,0.03
+C1=CN(C(=O)NC1=O)C2[C@@H]([C@@H]([C@H](O2)COP(=O)(O)OP(=O)(O)O[C@@H]3[C@@H]([C@H]([C@H]([C@H](O3)CO)O)O)O)O)O,Renin,Hypertension,0.032
+CC(C)OC(=O)[C@@H]([C@H](CC1CCCCC1)NC(=O)[C@H](CSC)NC(=O)[C@H](CC2=CC=CC=C2)NC(=O)N3CCOCC3)O,Renin,Hypertension,0.03
+C1CC1C#C[C@]2(C3=C(C=CC(=C3)Cl)NC(=O)N2)C(F)(F)F,HIV-1 Reverse Transcriptase,HIV infection,0.174
+C1CC1C#C[C@]2(C3=C(C=CC(=C3F)F)NC(=O)N2)C(F)(F)F,HIV-1 Reverse Transcriptase,HIV infection,0.161
+CC(C)C1=C(N(C(=N1)COC(=O)N)CC2=CC=NC=C2)SC3=CC(=CC(=C3)Cl)Cl,HIV-1 Reverse Transcriptase,HIV infection,0.138
+CC1=CN(C(=O)NC1=O)[C@H]2C[C@@H]([C@H](O2)CO)F,Viral DNA polymerase,HIV infection,0.162
+CCCCN1C(=O)[C@H](NC(=O)C12CCN(CC2)CC3=CC=C(C=C3)OC4=CC=C(C=C4)C(=O)O)[C@@H](C5CCCCC5)O.Cl,C-C chemokine receptor type 5 (CCR5),HIV infection,0.109
+C[C@]12C[C@@H](C3=C4CCC(=O)C=C4CC[C@H]3[C@@H]1CC[C@]2(COC)OC)C5=CC=C(C=C5)/C=N/O,Progesterone Receptor (selective modulation),Uterine fibroids; endometriosis (studied),0.061
+CCCSC1=C(C=CC(=N1)N2CCC[C@H](C2)CC(=O)O)C(=O)NC3CCCCC3,11beta-hydroxysteroid dehydrogenase type 1,Metabolic disease (studied),0.101
+CC[C@@H](C1=CC=CC=C1)NC(=O)C2=C(C(=NC3=CC=CC=C32)C4=CC=CC=C4)NS(=O)(=O)C,Neurokinin 3 (NK3) receptor,Menopausal vasomotor symptoms (hot flushes),0.073
+CC(C)C(=O)OC[C@@]1([C@H]([C@H]([C@@H](O1)N2C=CC(=NC2=O)N)OC(=O)C(C)C)OC(=O)C(C)C)N=[N+]=[N-],HCV NS5B RNA-dependent RNA polymerase,Hepatitis C,0.084
+CCC1=C(N2C=C(C=C(C2=N1)C)N3CCN(CC3)CC(=O)N4CC(C4)O)N(C)C5=NC(=C(S5)C#N)C6=CC=C(C=C6)F,Autotaxin (ENPP2),Idiopathic pulmonary fibrosis,0.028
+CC(C)(C)S(=O)(=O)C1=C(C=C2C(=C1)C(=NC=N2)NC3=CC4=C(C=C3)SC=N4)OCCOP(=O)(O)O,Receptor-interacting serine/threonine-protein kinase 2 (RIPK2),Inflammatory disease (studied),0.042
+C1=CC=C(C=C1)N2C3=CC=CC=C3C(=NC4=CC=CC(=C4)C(F)(F)F)C2=O,Galanin receptor type 3 (GALR$_3$),Anxiety / mood disorders (studied),0.054
+COC1=C(C=C(C=C1)CC2C(=O)NC(=O)S2)C(=O)NCC3=CC=C(C=C3)C(F)(F)F,Peroxisome proliferator-activated receptors _ and _,Type 2 diabetes / metabolic disease,0.143
+C1=CC=C2C(=C1)C(=CN2CC(=O)O)CC3=NC4=C(C(=CC(=C4S3)F)F)F,Aldose reductase,Diabetic complications (studied),0.027
+C[C@@H](C1=CC=C(C=C1)C(=O)NCCC(=O)O)N2C(=CC(=N2)C3=CC(=CC(=C3)Cl)Cl)C4=CC5=C(C=C4)C=C(C=C5)OC,Glucagon receptor (GCGR),Type 2 diabetes,0.061
+CS(=O)(=O)C1=CC=C(C=C1)C2=CC(=C(N=C2)N)C3=CN=C(C=C3)C(F)(F)F,Phosphatidylinositol 4-kinase (PI4K),Malaria,0.099
+CNC(=O)C1=C(OC2=CC(=C(C=C21)C3CC3)N(CCO)S(=O)(=O)C)C4=CC=C(C=C4)F,HCV NS5B RNA-dependent RNA polymerase (Non-nucleoside),Hepatitis C,0.163
+COC1=C(C2=C(CN([C@@H](C2)C(=O)O)C(=O)C(C3=CC=CC=C3)C4=CC=CC=C4)C=C1)OCC5=CC=CC=C5,Angiotensin II type 2 (AT2) receptor,Neuropathic pain,0.036
+CO/N=C(\N)/C1=CC=C(C=C1)C2=CC=C(O2)C3=CC=C(C=C3)/C(=N/OC)/N,DNA minor groove (converted to furamidine),African trypanosomiasis (HAT),0.11
+CC1=CC(=C2C(=C1)C=C(N2CC(=O)O)C(=O)NC3=NC(=C(S3)CCC4CCCCC4)C5=CC(=C(C=C5OC)Cl)OC)C,Cholecystokinin A (CCK-A) receptor,Obesity/metabolic disease (studied),0.024
+C1CN2CCC1N(CC2)C(=O)OC3=CC=C(C=C3)Br,_7_ nicotinic acetylcholine receptor,CNS disorders (studied),0.06
+C1[C@@H](COC2=NC(=CN21)[N+](=O)[O-])OCC3=CN=C(C=C3)C4=CC=C(C=C4)OC(F)(F)F,Deazaflavin-dependent nitroreductase (Ddn),Tuberculosis,0.07
+CCO[C@@H](CC1=CC=C(C=C1)OCCC2=CC=C(C=C2)OS(=O)(=O)C)C(=O)O,Peroxisome proliferator-activated receptors _ and _,Type 2 diabetes / dyslipidemia,0.121
