@@ -22,7 +22,7 @@ network access to the backend and the API contract below.
 
 ## 1. Backend endpoint
 
-- **Base URL:** `http://71.136.137.86:8001` (default for this skill — use this
+- **Base URL:** `http://136.119.133.178:8001` (default for this skill — use this
   unless the operator gives you a different one). Override with the
   `V25_BASE_URL` env var if needed.
 - **Health check:** `GET {BASE_URL}/api/health` → `{"status":"ok"}`. Call this
@@ -216,7 +216,7 @@ import csv, json, os, sys, time, argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
-BASE_URL = os.environ.get("V25_BASE_URL", "http://71.136.137.86:8001")
+BASE_URL = os.environ.get("V25_BASE_URL", "http://136.119.133.178:8001")
 MAX_WORKERS = 4          # 3–5; do not exceed
 TIMEOUT = 180            # seconds per request
 MAX_RETRIES = 3
@@ -359,7 +359,7 @@ if __name__ == "__main__":
 ### Run it
 
 ```bash
-export V25_BASE_URL="http://71.136.137.86:8001"   # default; override if the operator gives another
+export V25_BASE_URL="http://136.119.133.178:8001"   # default; override if the operator gives another
 python batch_eval.py molecules.csv -o v25_results.csv
 ```
 

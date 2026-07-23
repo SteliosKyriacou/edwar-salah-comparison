@@ -1,12 +1,13 @@
 #!/bin/bash
-# Start the Drug Success Predictor web app on port 5174
-# Backend (FastAPI) on 8001, Frontend (Vite) on 5174 with proxy to backend
+# Start the Drug Success Predictor web app on port 4003
+# Backend (FastAPI) on 8001, Frontend (Vite) on 4003 with proxy to backend
 
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Kill anything on ports 5174 and 8001
-lsof -ti:5174 -ti:8001 2>/dev/null | xargs kill -9 2>/dev/null || true
+# Kill anything on ports 4003 and 8001
+pkill -9 -f "uvicorn.*8001" || true
+pkill -9 -f "vite" || true
 sleep 1
 
 echo "Starting backend on :8001..."
@@ -14,7 +15,7 @@ conda run -n edwar-salah uvicorn main:app --host 0.0.0.0 --port 8001 \
   --app-dir "$DIR/backend" &
 BACKEND_PID=$!
 
-echo "Starting frontend on :5174..."
+echo "Starting frontend on :4003..."
 cd "$DIR/frontend" && npm run dev &
 FRONTEND_PID=$!
 

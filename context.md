@@ -144,7 +144,7 @@ When exceeded, users see a 429 with a polite countdown message:
 
 ## 7. REST API
 
-Base URL (external): `http://71.136.137.86:5173` (proxied to backend via Vite)
+Base URL (external): `http://136.119.133.178:5173` (proxied to backend via Vite)
 Base URL (local): `http://localhost:8000`
 
 ### `POST /api/analyze`
@@ -201,10 +201,10 @@ Target domain: **willyourdrugsucceedinclinic.stylianoskyriacou.ai**
 - **Caddy** runs as a systemd service (`systemctl status caddy`), config at `/etc/caddy/Caddyfile`. Source-of-truth Caddyfile is `web/Caddyfile`.
 - Caddy reverse-proxies port 443 → `localhost:5173`. Let's Encrypt is automatic.
 - **Requirements** for HTTPS to work:
-  - DNS A record `willyourdrugsucceedinclinic.stylianoskyriacou.ai → 71.136.137.86` (Squarespace DNS)
+  - DNS A record `willyourdrugsucceedinclinic.stylianoskyriacou.ai → 136.119.133.178` (Squarespace DNS)
   - **Delete the Squarespace forwarding rule** for that subdomain — it conflicts with A records
   - Router port forwarding for **80** and **443** to the server's LAN IP (`192.168.1.69`)
-- Currently the public-facing URL is `http://71.136.137.86:5173/` because DNS/ports are not yet fully configured. To re-enable Caddy mode: set Vite back to `host: '127.0.0.1'` in `vite.config.js`, ensure ports 80/443 are forwarded, and update the contact/footer URL in `start.sh`.
+- Currently the public-facing URL is `http://136.119.133.178:5173/` because DNS/ports are not yet fully configured. To re-enable Caddy mode: set Vite back to `host: '127.0.0.1'` in `vite.config.js`, ensure ports 80/443 are forwarded, and update the contact/footer URL in `start.sh`.
 
 ## 10. Frontend layout (current)
 
