@@ -76,9 +76,80 @@ _key_usage_timestamps = {}  # { "api_key": [timestamp1, timestamp2, ...] }
 
 import asyncio
 
-# Concurrency Semaphore (max 100 concurrent pipeline runs across all API keys)
-CONCURRENCY_LIMIT = 100
-_concurrency_semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "..", "config.json")
+
+
+class DynamicSemaphore:
+
+    def __init__(self, limit=100):
+        self.limit = limit
+        self.current = 0
+        self.queue = []
+
+    def resize(self, new_limit):
+        self.limit = new_limit
+        # Wake up as many queued requests as possible if limit increased
+        while self.current < self.limit and self.queue:
+            fut = self.queue.pop(0)
+            if not fut.done():
+                try:
+                    fut.set_result(True)
+                except Exception:
+                    pass
+
+    async def acquire(self):
+        if self.current < self.limit:
+            self.current += 1
+            return True
+
+        # Wait in line
+        loop = asyncio.get_running_loop()
+        fut = loop.create_future()
+        self.queue.append(fut)
+        try:
+            await fut
+        except Exception:
+            # If wait is cancelled, remove future from queue and reraise
+            if fut in self.queue:
+                self.queue.remove(fut)
+            raise
+        self.current += 1
+        return True
+
+    def release(self):
+        self.current = max(0, self.current - 1)
+        # Wake up next in line
+        while self.current < self.limit and self.queue:
+            fut = self.queue.pop(0)
+            if not fut.done():
+                try:
+                    fut.set_result(True)
+                    break
+                except Exception:
+                    pass
+
+    async def __aenter__(self):
+        await self.acquire()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+
+
+# Load dynamic concurrency limit from file on startup
+def _load_concurrency_limit():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                config = json.load(f)
+                return max(1, int(config.get("concurrency_limit", 100)))
+        except Exception:
+            pass
+    return 100
+
+
+CONCURRENCY_LIMIT = _load_concurrency_limit()
+_concurrency_semaphore = DynamicSemaphore(CONCURRENCY_LIMIT)
 
 _evaluating_count = 0
 _queued_count = 0
@@ -169,6 +240,10 @@ class AdminKeyRequest(BaseModel):
 
 class AdminDeleteKeyRequest(BaseModel):
     key: str
+
+
+class AdminConfigRequest(BaseModel):
+    concurrency_limit: int
 
 
 class AnalyzeRequest(BaseModel):
@@ -436,6 +511,64 @@ def delete_key(req: AdminDeleteKeyRequest, request: Request):
         raise HTTPException(500, f"Failed to save API Keys: {e}")
 
     return {"status": "success", "deleted_key": target_key}
+
+
+@app.get("/api/admin/config")
+def get_admin_config(request: Request):
+    # Verify the requester is an admin
+    api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if not api_key:
+        raise HTTPException(401, "API Key is required")
+
+    if not os.path.exists(KEYS_FILE):
+        raise HTTPException(500, "API Keys storage not found.")
+
+    try:
+        with open(KEYS_FILE, "r") as f:
+            keys = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading API Keys storage: {e}")
+
+    if api_key not in keys or not keys[api_key].get("admin"):
+        raise HTTPException(403, "Access denied. Admin privileges required.")
+
+    # Read config
+    limit = _load_concurrency_limit()
+    return {"concurrency_limit": limit}
+
+
+@app.post("/api/admin/config")
+def update_admin_config(req: AdminConfigRequest, request: Request):
+    # Verify the requester is an admin
+    api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if not api_key:
+        raise HTTPException(401, "API Key is required")
+
+    if not os.path.exists(KEYS_FILE):
+        raise HTTPException(500, "API Keys storage not found.")
+
+    try:
+        with open(KEYS_FILE, "r") as f:
+            keys = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading API Keys storage: {e}")
+
+    if api_key not in keys or not keys[api_key].get("admin"):
+        raise HTTPException(403, "Access denied. Admin privileges required.")
+
+    # Update config
+    new_limit = max(1, req.concurrency_limit)
+
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump({"concurrency_limit": new_limit}, f, indent=2)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to save global config: {e}")
+
+    # Resize the semaphore dynamically in memory!
+    _concurrency_semaphore.resize(new_limit)
+
+    return {"status": "success", "concurrency_limit": new_limit}
 
 
 @app.get("/api/visits")

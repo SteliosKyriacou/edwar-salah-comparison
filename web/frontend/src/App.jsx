@@ -218,6 +218,58 @@ function UsagePage() {
   const [adminSuccess, setAdminSuccess] = useState(null)
   const [visibleKeys, setVisibleKeys] = useState({})
 
+  // Admin global config state
+  const [formConcurrency, setFormConcurrency] = useState(100)
+  const [concurrencySuccess, setConcurrencySuccess] = useState(null)
+  const [concurrencyError, setConcurrencyError] = useState(null)
+
+  // Load config on admin load
+  useEffect(() => {
+    if (info && info.admin) {
+      async function loadConfig() {
+        try {
+          const res = await fetch(`/api/admin/config?api_key=${encodeURIComponent(apiKey)}`)
+          if (res.ok) {
+            const data = await res.json()
+            setFormConcurrency(data.concurrency_limit)
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      loadConfig()
+    }
+  }, [info])
+
+  async function handleSaveConfig(e) {
+    e.preventDefault()
+    setConcurrencySuccess(null)
+    setConcurrencyError(null)
+
+    try {
+      const res = await fetch(`/api/admin/config?api_key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify({
+          concurrency_limit: formConcurrency
+        })
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Failed to update concurrency limit.')
+      }
+
+      setConcurrencySuccess('Successfully updated global concurrency limit live!')
+      checkUsage()
+    } catch (e) {
+      setConcurrencyError(e.message)
+    }
+  }
+
   async function checkUsage() {
     if (!apiKey.trim()) {
       setError('Please enter an API Key to check.')
@@ -503,6 +555,37 @@ function UsagePage() {
             <div className="usage-card" style={{ marginTop: 32 }}>
               <h3 style={{ fontSize: '1.2rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-orange)' }}>👑 Admin Control Panel</h3>
               
+              {/* Dynamic Concurrency Control */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24 }}>
+                <h4 style={{ fontSize: '0.95rem', marginBottom: 10, color: 'var(--accent-cyan)' }}>
+                  ⚙️ Dynamic Concurrency Control
+                </h4>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Adjust the maximum number of concurrent pipeline evaluations permitted globally across all API keys. This takes effect instantly in-memory without interrupting active predictions!
+                </p>
+
+                {concurrencyError && <div className="error-msg" style={{ marginBottom: 14, padding: '8px 12px', fontSize: '0.8rem' }}>{concurrencyError}</div>}
+                {concurrencySuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{concurrencySuccess}</div>}
+
+                <form onSubmit={handleSaveConfig} style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', marginBottom: 4, color: 'var(--text-secondary)' }}>Max Global Concurrent Runs</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      max="5000"
+                      value={formConcurrency}
+                      onChange={(e) => setFormConcurrency(parseInt(e.target.value) || 1)}
+                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                  <button type="submit" style={{ padding: '9px 20px', background: 'var(--accent-blue)', color: '#000', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                    Apply Limit Live
+                  </button>
+                </form>
+              </div>
+
               {/* Key Management Form */}
               <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24 }}>
                 <h4 style={{ fontSize: '0.95rem', marginBottom: 14, color: 'var(--text-primary)' }}>
