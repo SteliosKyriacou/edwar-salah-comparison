@@ -256,31 +256,112 @@ function UsagePage() {
       {error && <div className="error-msg" style={{ marginBottom: 20 }}>{error}</div>}
 
       {info && (
-        <div className="usage-card">
-          <div className="usage-item">
-            <span className="usage-label">Owner:</span>
-            <span className="usage-value active">{info.owner}</span>
+        <>
+          <div className="usage-card">
+            <h3 style={{ fontSize: '1.1rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-blue)' }}>📋 Key Profile & Quota</h3>
+            <div className="usage-item">
+              <span className="usage-label">Owner:</span>
+              <span className="usage-value active" style={{ fontSize: '1.05rem' }}>{info.owner}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Hourly Limit:</span>
+              <span className={`usage-value ${info.rate_limit < 0 ? 'unlimited' : ''}`}>
+                {info.rate_limit < 0 ? 'Unlimited' : info.rate_limit}
+              </span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Rolling Hour Usage:</span>
+              <span className="usage-value">{info.usage} predictions</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Remaining Quota:</span>
+              <span className={`usage-value ${info.remaining === 'unlimited' ? 'unlimited' : ''}`}>
+                {info.remaining === 'unlimited' ? 'Unlimited' : `${info.remaining} predictions`}
+              </span>
+            </div>
           </div>
-          <div className="usage-item">
-            <span className="usage-label">Hourly Limit:</span>
-            <span className={`usage-value ${info.rate_limit < 0 ? 'unlimited' : ''}`}>
-              {info.rate_limit < 0 ? 'Unlimited' : info.rate_limit}
-            </span>
+
+          <div className="usage-card">
+            <h3 style={{ fontSize: '1.1rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-purple)' }}>📈 Cumulative Key Statistics</h3>
+            <div className="usage-item">
+              <span className="usage-label">Total Predictions:</span>
+              <span className="usage-value">{info.stats?.total_predictions || 0}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Unique Molecules Analyzed:</span>
+              <span className="usage-value">{info.stats?.unique_molecules || 0}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Unique Targets Analyzed:</span>
+              <span className="usage-value">{info.stats?.unique_targets || 0}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Unique Indications Analyzed:</span>
+              <span className="usage-value">{info.stats?.unique_indications || 0}</span>
+            </div>
           </div>
-          <div className="usage-item">
-            <span className="usage-label">Active Usage:</span>
-            <span className="usage-value">{info.usage} predictions</span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }} className="usage-grid">
+            <div className="usage-card" style={{ marginBottom: 0 }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8, color: 'var(--accent-cyan)' }}>🧬 By Target</h3>
+              {info.stats?.predictions_per_target && Object.keys(info.stats.predictions_per_target).length > 0 ? (
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 4px' }}>Target</th>
+                        <th style={{ textAlign: 'right', padding: '6px 4px' }}>Predictions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(info.stats.predictions_per_target)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([t, count]) => (
+                          <tr key={t} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '6px 4px', color: 'var(--text-primary)' }}>{t}</td>
+                            <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 700, color: 'var(--accent-blue)' }}>{count}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '10px 0' }}>No targets recorded yet.</div>
+              )}
+            </div>
+
+            <div className="usage-card" style={{ marginBottom: 0 }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8, color: 'var(--accent-green)' }}>🏥 By Indication</h3>
+              {info.stats?.predictions_per_indication && Object.keys(info.stats.predictions_per_indication).length > 0 ? (
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 4px' }}>Indication</th>
+                        <th style={{ textAlign: 'right', padding: '6px 4px' }}>Predictions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(info.stats.predictions_per_indication)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([ind, count]) => (
+                          <tr key={ind} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '6px 4px', color: 'var(--text-primary)' }}>{ind}</td>
+                            <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 700, color: 'var(--accent-green)' }}>{count}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '10px 0' }}>No indications recorded yet.</div>
+              )}
+            </div>
           </div>
-          <div className="usage-item">
-            <span className="usage-label">Remaining:</span>
-            <span className={`usage-value ${info.remaining === 'unlimited' ? 'unlimited' : ''}`}>
-              {info.remaining === 'unlimited' ? 'Unlimited' : `${info.remaining} predictions`}
-            </span>
-          </div>
-        </div>
+        </>
       )}
 
-      <a href="/" className="usage-btn">&larr; Back to Predictor App</a>
+      <a href="/" className="usage-btn" style={{ marginTop: 12 }}>&larr; Back to Predictor App</a>
     </div>
   )
 }

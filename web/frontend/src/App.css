@@ -849,3 +849,9 @@ body {
   background: var(--border);
   color: var(--accent-blue);
 }
+
+@media (max-width: 600px) {
+  .usage-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

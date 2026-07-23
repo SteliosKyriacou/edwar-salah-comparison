@@ -160,6 +160,73 @@ def health():
     return {"status": "ok"}
 
 
+STATS_LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
+STATS_LOG_FILE = os.path.join(STATS_LOG_DIR, "api_key_stats.jsonl")
+
+
+def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str):
+    """Log prediction details for API Key statistics."""
+    from datetime import datetime
+    os.makedirs(STATS_LOG_DIR, exist_ok=True)
+    entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "api_key": api_key,
+        "smiles": smiles.strip(),
+        "target": target.strip(),
+        "indication": indication.strip()
+    }
+    with open(STATS_LOG_FILE, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
+def _get_api_key_stats(api_key: str) -> dict:
+    """Read stats log file and compute metrics for a specific API Key."""
+    total_predictions = 0
+    unique_smiles = set()
+    unique_targets = set()
+    unique_indications = set()
+    by_indication = {}
+    by_target = {}
+
+    if os.path.exists(STATS_LOG_FILE):
+        try:
+            with open(STATS_LOG_FILE, "r") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    try:
+                        entry = json.loads(line)
+                        if entry.get("api_key") == api_key:
+                            total_predictions += 1
+
+                            smiles = entry.get("smiles", "").strip()
+                            if smiles:
+                                unique_smiles.add(smiles)
+
+                            target = entry.get("target", "").strip()
+                            if target:
+                                unique_targets.add(target)
+                                by_target[target] = by_target.get(target, 0) + 1
+
+                            indication = entry.get("indication", "").strip()
+                            if indication:
+                                unique_indications.add(indication)
+                                by_indication[indication] = by_indication.get(indication, 0) + 1
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    return {
+        "total_predictions": total_predictions,
+        "unique_molecules": len(unique_smiles),
+        "unique_targets": len(unique_targets),
+        "unique_indications": len(unique_indications),
+        "predictions_per_indication": by_indication,
+        "predictions_per_target": by_target
+    }
+
+
 @app.get("/api/usage")
 def get_usage(request: Request):
     api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
@@ -196,13 +263,17 @@ def get_usage(request: Request):
         # Unlimited usage
         remaining = "unlimited"
 
+    # Get cumulative stats
+    stats = _get_api_key_stats(api_key)
+
     return {
         "valid": True,
         "owner": owner,
         "rate_limit": rate_limit,
         "usage": usage_count,
         "remaining": remaining,
-        "window": rate_window
+        "window": rate_window,
+        "stats": stats
     }
 
 
@@ -243,6 +314,7 @@ def analyze(req: AnalyzeRequest, request: Request):
 
     # Record successful usage
     _record_key_usage(key_info["key"], key_info["rate_limit"])
+    _log_api_key_stats(key_info["key"], req.smiles, req.target, req.indication)
 
     ua = request.headers.get("user-agent", "")
     log_visit(ip, f"/api/analyze?owner={key_info['owner']}", ua)
