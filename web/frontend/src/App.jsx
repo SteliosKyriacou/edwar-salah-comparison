@@ -10,10 +10,16 @@ import FdaResponse from './components/FdaResponse'
 import WebSearchSummary from './components/WebSearchSummary'
 
 export default function App() {
+  const [apiKey, setApiKey] = useState(localStorage.getItem('v25_api_key') || '')
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const resultsRef = useRef(null)
+
+  // Router check
+  if (window.location.pathname === '/usage') {
+    return <UsagePage />
+  }
 
   async function handleSubmit(formData) {
     setLoading(true)
@@ -23,7 +29,10 @@ export default function App() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
         body: JSON.stringify(formData),
       })
 
@@ -49,6 +58,24 @@ export default function App() {
     <>
       <Header />
       <div className="container">
+        <div className="api-key-config">
+          <label htmlFor="api-key-input">🔑 API Key:</label>
+          <input
+            id="api-key-input"
+            type="password"
+            placeholder="Enter your V25 API Key to enable predictions..."
+            value={apiKey}
+            onChange={(e) => {
+              const val = e.target.value
+              setApiKey(val)
+              localStorage.setItem('v25_api_key', val)
+            }}
+          />
+          <a href="/usage" style={{ marginLeft: 12, fontSize: '0.85rem', color: 'var(--accent-blue)', textDecoration: 'none', fontWeight: 600 }}>
+            View My Usage &rarr;
+          </a>
+        </div>
+
         <InputForm onSubmit={handleSubmit} loading={loading} />
 
         {loading && <LoadingCountdown />}
@@ -146,5 +173,114 @@ export default function App() {
         <a href="mailto:stelios@reneubio.com" className="contact-email">stelios@reneubio.com</a>
       </div>
     </>
+  )
+}
+
+function UsagePage() {
+  const [apiKey, setApiKey] = useState(localStorage.getItem('v25_api_key') || '')
+  const [info, setInfo] = useState(null)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  async function checkUsage() {
+    if (!apiKey.trim()) {
+      setError('Please enter an API Key to check.')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    setInfo(null)
+    try {
+      const res = await fetch(`/api/usage?api_key=${encodeURIComponent(apiKey)}`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Failed to fetch usage information.')
+      }
+      const data = await res.json()
+      setInfo(data)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (apiKey) {
+      checkUsage()
+    }
+  }, [])
+
+  return (
+    <div className="usage-container">
+      <h2 className="usage-title">🔑 V25 API Key Usage</h2>
+      
+      <div className="form-group" style={{ marginBottom: 20 }}>
+        <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>API Key</label>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input
+            type="password"
+            placeholder="Enter your V25 API Key..."
+            value={apiKey}
+            onChange={(e) => {
+              setApiKey(e.target.value)
+              localStorage.setItem('v25_api_key', e.target.value)
+            }}
+            style={{
+              flex: 1,
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              color: 'var(--text-primary)'
+            }}
+          />
+          <button
+            onClick={checkUsage}
+            disabled={loading}
+            style={{
+              background: 'var(--accent-blue)',
+              color: '#000',
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 20px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            {loading ? 'Checking...' : 'Check'}
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="error-msg" style={{ marginBottom: 20 }}>{error}</div>}
+
+      {info && (
+        <div className="usage-card">
+          <div className="usage-item">
+            <span className="usage-label">Owner:</span>
+            <span className="usage-value active">{info.owner}</span>
+          </div>
+          <div className="usage-item">
+            <span className="usage-label">Hourly Limit:</span>
+            <span className={`usage-value ${info.rate_limit < 0 ? 'unlimited' : ''}`}>
+              {info.rate_limit < 0 ? 'Unlimited' : info.rate_limit}
+            </span>
+          </div>
+          <div className="usage-item">
+            <span className="usage-label">Active Usage:</span>
+            <span className="usage-value">{info.usage} predictions</span>
+          </div>
+          <div className="usage-item">
+            <span className="usage-label">Remaining:</span>
+            <span className={`usage-value ${info.remaining === 'unlimited' ? 'unlimited' : ''}`}>
+              {info.remaining === 'unlimited' ? 'Unlimited' : `${info.remaining} predictions`}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <a href="/" className="usage-btn">&larr; Back to Predictor App</a>
+    </div>
   )
 }

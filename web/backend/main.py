@@ -33,33 +33,118 @@ def _get_client_ip(request: Request) -> str:
     return ip
 
 
-# --- IPs exempt from rate limiting and logging ---
-EXEMPT_IPS = {"136.119.133.178", "172.59.211.68", "172.59.214.44", "172.59.214.110", "172.59.212.106", "192.168.0.18"}
+"""FastAPI backend — Will Your Drug Succeed in the Clinic?"""
 
-# --- Global rate limiter: 100 predictions per hour ---
-RATE_LIMIT = 100
-RATE_WINDOW = 3600  # seconds
-_prediction_timestamps: list = []
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
+from pydantic import BaseModel
+import os
+import time
+import math
+import json
+
+from agents import run_pipeline
+from logger import log_prediction
+from visits import log_visit, get_visits_summary
+
+app = FastAPI(title="Drug Success Predictor", version="1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-def _check_rate_limit():
-    """Enforce global rate limit. Raises HTTPException if exceeded."""
-    now = time.time()
-    cutoff = now - RATE_WINDOW
-    # Prune old timestamps
-    while _prediction_timestamps and _prediction_timestamps[0] < cutoff:
-        _prediction_timestamps.pop(0)
-    if len(_prediction_timestamps) >= RATE_LIMIT:
-        oldest = _prediction_timestamps[0]
-        reset_in = math.ceil(oldest + RATE_WINDOW - now)
-        minutes = math.ceil(reset_in / 60)
+def _get_client_ip(request: Request) -> str:
+    """Extract real client IP from proxy headers or direct connection."""
+    ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if not ip:
+        ip = request.headers.get("x-real-ip", "").strip()
+    if not ip:
+        ip = request.client.host if request.client else "unknown"
+    return ip
+
+
+KEYS_FILE = os.path.join(os.path.dirname(__file__), "..", "keys.json")
+
+# Dynamic key-specific sliding window tracking
+_key_usage_timestamps = {}  # { "api_key": [timestamp1, timestamp2, ...] }
+
+
+def _authenticate_and_rate_limit(request: Request) -> dict:
+    """Authenticate request using X-API-Key header or query parameter.
+
+    Returns key configuration dict if successful, otherwise raises HTTPException.
+    """
+    api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if not api_key:
         raise HTTPException(
-            429,
-            f"We've reached the limit of {RATE_LIMIT} predictions per hour. "
-            f"Predictions will be available again in {minutes} minute{'s' if minutes != 1 else ''}. "
-            f"Thank you for your patience!",
+            401,
+            "API Key is required. Please provide a valid X-API-Key header or api_key query parameter."
         )
-    _prediction_timestamps.append(now)
+
+    if not os.path.exists(KEYS_FILE):
+        raise HTTPException(500, "API Keys storage not found.")
+
+    try:
+        with open(KEYS_FILE, "r") as f:
+            keys = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading API Keys storage: {e}")
+
+    if api_key not in keys:
+        raise HTTPException(403, "Invalid API Key. Please verify your credentials.")
+
+    key_info = keys[api_key]
+    owner = key_info.get("owner", "Unknown")
+    rate_limit = key_info.get("rate_limit", 0)  # default to 0 (no usage allowed)
+    rate_window = key_info.get("rate_window", 3600)
+
+    # Check rate limit
+    if rate_limit == 0:
+        raise HTTPException(403, f"API Key for {owner} is deactivated or has a zero usage limit.")
+
+    if rate_limit > 0:
+        now = time.time()
+        cutoff = now - rate_window
+
+        # Initialize list of timestamps if not present
+        if api_key not in _key_usage_timestamps:
+            _key_usage_timestamps[api_key] = []
+
+        timestamps = _key_usage_timestamps[api_key]
+        # Prune old timestamps
+        while timestamps and timestamps[0] < cutoff:
+            timestamps.pop(0)
+
+        if len(timestamps) >= rate_limit:
+            oldest = timestamps[0]
+            reset_in = math.ceil(oldest + rate_window - now)
+            minutes = math.ceil(reset_in / 60)
+            raise HTTPException(
+                429,
+                f"API Key limit of {rate_limit} predictions per hour has been reached. "
+                f"More predictions will be available in {minutes} minute{'s' if minutes != 1 else ''}."
+            )
+
+    return {
+        "key": api_key,
+        "owner": owner,
+        "rate_limit": rate_limit,
+        "rate_window": rate_window
+    }
+
+
+def _record_key_usage(api_key: str, rate_limit: int):
+    """Record a successful usage of the API Key."""
+    if rate_limit > 0:
+        if api_key not in _key_usage_timestamps:
+            _key_usage_timestamps[api_key] = []
+        _key_usage_timestamps[api_key].append(time.time())
 
 
 class AnalyzeRequest(BaseModel):
@@ -75,6 +160,52 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/api/usage")
+def get_usage(request: Request):
+    api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if not api_key:
+        raise HTTPException(401, "API Key is required")
+
+    if not os.path.exists(KEYS_FILE):
+        raise HTTPException(500, "API Keys storage not found.")
+
+    try:
+        with open(KEYS_FILE, "r") as f:
+            keys = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading API Keys storage: {e}")
+
+    if api_key not in keys:
+        raise HTTPException(403, "Invalid API Key")
+
+    key_info = keys[api_key]
+    owner = key_info.get("owner", "Unknown")
+    rate_limit = key_info.get("rate_limit", 0)
+    rate_window = key_info.get("rate_window", 3600)
+
+    # Calculate active usage
+    usage_count = 0
+    if rate_limit > 0:
+        now = time.time()
+        cutoff = now - rate_window
+        timestamps = _key_usage_timestamps.get(api_key, [])
+        # Count timestamps within window
+        usage_count = sum(1 for ts in timestamps if ts >= cutoff)
+        remaining = max(0, rate_limit - usage_count)
+    else:
+        # Unlimited usage
+        remaining = "unlimited"
+
+    return {
+        "valid": True,
+        "owner": owner,
+        "rate_limit": rate_limit,
+        "usage": usage_count,
+        "remaining": remaining,
+        "window": rate_window
+    }
+
+
 @app.get("/api/visits")
 def visits():
     return get_visits_summary()
@@ -87,11 +218,10 @@ def dashboard():
 
 @app.post("/api/analyze")
 def analyze(req: AnalyzeRequest, request: Request):
-    ip = _get_client_ip(request)
-    is_exempt = ip in EXEMPT_IPS
+    # Authenticate and rate limit via API Key
+    key_info = _authenticate_and_rate_limit(request)
 
-    if not is_exempt:
-        _check_rate_limit()
+    ip = _get_client_ip(request)
 
     if not req.smiles.strip():
         raise HTTPException(400, "SMILES is required")
@@ -111,10 +241,12 @@ def analyze(req: AnalyzeRequest, request: Request):
     except Exception as e:
         raise HTTPException(500, f"Pipeline error: {e}")
 
-    if not is_exempt:
-        ua = request.headers.get("user-agent", "")
-        log_visit(ip, "/api/analyze", ua)
-        log_prediction(result)
+    # Record successful usage
+    _record_key_usage(key_info["key"], key_info["rate_limit"])
+
+    ua = request.headers.get("user-agent", "")
+    log_visit(ip, f"/api/analyze?owner={key_info['owner']}", ua)
+    log_prediction(result)
     return result
 
 

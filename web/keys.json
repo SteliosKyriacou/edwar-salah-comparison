@@ -1,0 +1,7 @@
+{
+  "stelios_unlimited_key": {
+    "owner": "Stelios",
+    "rate_limit": -1,
+    "rate_window": 3600
+  }
+}
