@@ -19,9 +19,15 @@ _client = None
 
 
 def _get_client():
+    """Lazy Vertex AI client (auth via Application Default Credentials).
+
+    Read project/location lazily so .env (loaded by agents.py) is in effect.
+    """
     global _client
     if _client is None:
-        _client = genai.Client()
+        project = os.environ.get("GOOGLE_CLOUD_PROJECT", "ai-pipeline-461818")
+        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+        _client = genai.Client(vertexai=True, project=project, location=location)
     return _client
 
 

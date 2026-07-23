@@ -34,7 +34,7 @@ def _get_client_ip(request: Request) -> str:
 
 
 # --- IPs exempt from rate limiting and logging ---
-EXEMPT_IPS = {"136.119.133.178", "172.59.211.68", "172.59.214.44"}
+EXEMPT_IPS = {"136.119.133.178", "172.59.211.68", "172.59.214.44", "172.59.214.110", "172.59.212.106", "192.168.0.18"}
 
 # --- Global rate limiter: 100 predictions per hour ---
 RATE_LIMIT = 100

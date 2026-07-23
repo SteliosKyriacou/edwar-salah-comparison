@@ -5,13 +5,17 @@ import json
 import math
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from web_search import run_web_search
 
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 load_dotenv(os.path.join(BASE, ".env"))
+
+# Vertex AI configuration (auth via Application Default Credentials).
+PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "ai-pipeline-461818")
+LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 
 TCSP_CEIL = 0.40
 
@@ -27,7 +31,12 @@ SALAH_PROMPT = _load_prompt("biological-rationalist")
 TOXI_PROMPT = _load_prompt("toxi-predictive-toxicologist")
 PHARMA_PROMPT = _load_prompt("pharma-clinical-pharmacologist")
 
-llm = ChatGoogleGenerativeAI(model="gemini-3.1-pro-preview", temperature=0.0)
+llm = ChatVertexAI(
+    model="gemini-3.1-pro-preview",
+    temperature=0.0,
+    project=PROJECT,
+    location=LOCATION,
+)
 
 
 def parse_json(content):
