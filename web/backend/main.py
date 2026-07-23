@@ -156,6 +156,18 @@ def _record_key_usage(api_key: str, rate_limit: int):
         _key_usage_timestamps[api_key].append(time.time())
 
 
+class AdminKeyRequest(BaseModel):
+    key: str = ""
+    owner: str
+    rate_limit: int = -1
+    rate_window: int = 3600
+    admin: bool = False
+
+
+class AdminDeleteKeyRequest(BaseModel):
+    key: str
+
+
 class AnalyzeRequest(BaseModel):
     smiles: str
     target: str
@@ -289,6 +301,7 @@ def get_usage(request: Request):
     owner = key_info.get("owner", "Unknown")
     rate_limit = key_info.get("rate_limit", 0)
     rate_window = key_info.get("rate_window", 3600)
+    is_admin = key_info.get("admin", False)
 
     # Calculate active usage
     usage_count = 0
@@ -306,17 +319,119 @@ def get_usage(request: Request):
     # Get cumulative stats
     stats = _get_api_key_stats(api_key)
 
-    return {
+    response_data = {
         "valid": True,
         "owner": owner,
         "rate_limit": rate_limit,
         "usage": usage_count,
         "remaining": remaining,
         "window": rate_window,
+        "admin": is_admin,
         "evaluating_now": _evaluating_count,
         "queued_now": _queued_count,
         "stats": stats
     }
+
+    if is_admin:
+        all_keys = []
+        for k, info in keys.items():
+            k_stats = _get_api_key_stats(k)
+            all_keys.append({
+                "key": k,
+                "owner": info.get("owner", "Unknown"),
+                "rate_limit": info.get("rate_limit", 0),
+                "rate_window": info.get("rate_window", 3600),
+                "admin": info.get("admin", False),
+                "stats": k_stats
+            })
+        response_data["all_keys"] = all_keys
+
+    return response_data
+
+
+@app.post("/api/admin/keys")
+def add_or_edit_key(req: AdminKeyRequest, request: Request):
+    # Verify the requester is an admin
+    api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if not api_key:
+        raise HTTPException(401, "API Key is required")
+
+    if not os.path.exists(KEYS_FILE):
+        raise HTTPException(500, "API Keys storage not found.")
+
+    try:
+        with open(KEYS_FILE, "r") as f:
+            keys = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading API Keys storage: {e}")
+
+    if api_key not in keys or not keys[api_key].get("admin"):
+        raise HTTPException(403, "Access denied. Admin privileges required.")
+
+    # Create or edit
+    target_key = req.key.strip()
+    if not target_key:
+        import secrets
+        # Generate a high-entropy hex secure key
+        random_hex = secrets.token_hex(8)
+        limit_suffix = "unlimited" if req.rate_limit < 0 else f"limit{req.rate_limit}"
+        target_key = f"v25_{req.owner.lower().replace(' ', '_')}_{limit_suffix}_{random_hex}"
+
+    # Check if target key is Stelios's key and we are trying to demote him (prevent self-lockout)
+    if target_key == "v25_stelios_unlimited_a28b6d39c04f5e71" and not req.admin:
+        raise HTTPException(400, "Cannot remove admin privilege from the main administrator.")
+
+    keys[target_key] = {
+        "owner": req.owner.strip(),
+        "rate_limit": req.rate_limit,
+        "rate_window": req.rate_window,
+        "admin": req.admin
+    }
+
+    try:
+        with open(KEYS_FILE, "w") as f:
+            json.dump(keys, f, indent=2)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to save API Keys: {e}")
+
+    return {"status": "success", "key": target_key, "owner": req.owner.strip()}
+
+
+@app.post("/api/admin/keys/delete")
+def delete_key(req: AdminDeleteKeyRequest, request: Request):
+    # Verify the requester is an admin
+    api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if not api_key:
+        raise HTTPException(401, "API Key is required")
+
+    if not os.path.exists(KEYS_FILE):
+        raise HTTPException(500, "API Keys storage not found.")
+
+    try:
+        with open(KEYS_FILE, "r") as f:
+            keys = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading API Keys storage: {e}")
+
+    if api_key not in keys or not keys[api_key].get("admin"):
+        raise HTTPException(403, "Access denied. Admin privileges required.")
+
+    target_key = req.key.strip()
+    if target_key not in keys:
+        raise HTTPException(404, "Target API Key not found.")
+
+    if target_key == "v25_stelios_unlimited_a28b6d39c04f5e71":
+        raise HTTPException(400, "Cannot delete the main administrator key.")
+
+    del keys[target_key]
+
+    try:
+        with open(KEYS_FILE, "w") as f:
+            json.dump(keys, f, indent=2)
+    except Exception as e:
+        raise HTTPException(500, f"Failed to save API Keys: {e}")
+
+    return {"status": "success", "deleted_key": target_key}
 
 
 @app.get("/api/visits")

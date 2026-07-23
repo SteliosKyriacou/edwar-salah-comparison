@@ -2,7 +2,8 @@
   "v25_stelios_unlimited_a28b6d39c04f5e71": {
     "owner": "Stelios",
     "rate_limit": -1,
-    "rate_window": 3600
+    "rate_window": 3600,
+    "admin": true
   },
   "v25_ramil_limit50_7c0e5b128e49d3f1": {
     "owner": "Ramil",

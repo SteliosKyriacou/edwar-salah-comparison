@@ -182,6 +182,15 @@ function UsagePage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  // Admin form state
+  const [formKey, setFormKey] = useState('')
+  const [formOwner, setFormOwner] = useState('')
+  const [formLimit, setFormLimit] = useState(-1)
+  const [formAdmin, setFormAdmin] = useState(false)
+  const [adminError, setAdminError] = useState(null)
+  const [adminSuccess, setAdminSuccess] = useState(null)
+  const [visibleKeys, setVisibleKeys] = useState({})
+
   async function checkUsage() {
     if (!apiKey.trim()) {
       setError('Please enter an API Key to check.')
@@ -205,6 +214,102 @@ function UsagePage() {
     }
   }
 
+  function resetForm() {
+    setFormKey('')
+    setFormOwner('')
+    setFormLimit(-1)
+    setFormAdmin(false)
+    setAdminError(null)
+    setAdminSuccess(null)
+  }
+
+  async function handleSaveKey(e) {
+    e.preventDefault()
+    setAdminError(null)
+    setAdminSuccess(null)
+
+    if (!formOwner.trim()) {
+      setAdminError('Owner Name is required.')
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/admin/keys?api_key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify({
+          key: formKey,
+          owner: formOwner,
+          rate_limit: formLimit,
+          rate_window: 3600,
+          admin: formAdmin
+        })
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Failed to save key.')
+      }
+
+      const result = await res.json()
+      setAdminSuccess(`Successfully saved key for ${result.owner}!`)
+      resetForm()
+      checkUsage()
+    } catch (e) {
+      setAdminError(e.message)
+    }
+  }
+
+  async function handleDeleteKey(targetKey) {
+    if (!window.confirm('Are you absolutely sure you want to permanently delete this API Key?')) {
+      return
+    }
+    setAdminError(null)
+    setAdminSuccess(null)
+
+    try {
+      const res = await fetch(`/api/admin/keys/delete?api_key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify({
+          key: targetKey
+        })
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Failed to delete key.')
+      }
+
+      setAdminSuccess('Successfully deleted API Key.')
+      checkUsage()
+    } catch (e) {
+      setAdminError(e.message)
+    }
+  }
+
+  function handleEditKey(k) {
+    setFormKey(k.key)
+    setFormOwner(k.owner)
+    setFormLimit(k.rate_limit)
+    setFormAdmin(k.admin)
+    setAdminError(null)
+    setAdminSuccess(null)
+  }
+
+  function toggleKeyVisibility(k) {
+    setVisibleKeys((prev) => ({
+      ...prev,
+      [k]: !prev[k]
+    }))
+  }
+
   useEffect(() => {
     if (apiKey) {
       checkUsage()
@@ -212,7 +317,7 @@ function UsagePage() {
   }, [])
 
   return (
-    <div className="usage-container">
+    <div className="usage-container" style={{ maxWidth: info && info.admin ? '1000px' : '600px' }}>
       <h2 className="usage-title">🔑 V25 API Key Usage</h2>
       
       <div className="form-group" style={{ marginBottom: 20 }}>
@@ -366,6 +471,147 @@ function UsagePage() {
               )}
             </div>
           </div>
+
+          {info.admin && (
+            <div className="usage-card" style={{ marginTop: 32 }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-orange)' }}>👑 Admin Control Panel</h3>
+              
+              {/* Key Management Form */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24 }}>
+                <h4 style={{ fontSize: '0.95rem', marginBottom: 14, color: 'var(--text-primary)' }}>
+                  {formKey ? '✏️ Edit API Key' : '➕ Register New API Key'}
+                </h4>
+                
+                {adminError && <div className="error-msg" style={{ marginBottom: 14, padding: '8px 12px', fontSize: '0.8rem' }}>{adminError}</div>}
+                {adminSuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{adminSuccess}</div>}
+
+                <form onSubmit={handleSaveKey} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', marginBottom: 4, color: 'var(--text-secondary)' }}>Owner Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. New User"
+                      value={formOwner}
+                      onChange={(e) => setFormOwner(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', marginBottom: 4, color: 'var(--text-secondary)' }}>
+                      {formKey ? 'API Key (Protected)' : 'API Key (Optional - leave blank to auto-generate)'}
+                    </label>
+                    <input
+                      type="text"
+                      disabled={!!formKey}
+                      placeholder={formKey ? '' : "e.g. custom_key_string..."}
+                      value={formKey}
+                      onChange={(e) => setFormKey(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', background: formKey ? 'var(--bg-card)' : 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem', opacity: formKey ? 0.6 : 1 }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ display: 'block', fontSize: '0.78rem', marginBottom: 4, color: 'var(--text-secondary)' }}>Hourly Limit</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="Use -1 for unlimited"
+                      value={formLimit}
+                      onChange={(e) => setFormLimit(parseInt(e.target.value) || -1)}
+                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20 }}>
+                    <input
+                      type="checkbox"
+                      id="formAdmin"
+                      checked={formAdmin}
+                      onChange={(e) => setFormAdmin(e.target.checked)}
+                      style={{ cursor: 'pointer', width: 16, height: 16 }}
+                    />
+                    <label htmlFor="formAdmin" style={{ fontSize: '0.85rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}>Grant Admin Power</label>
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10 }}>
+                    <button type="submit" style={{ padding: '8px 16px', background: 'var(--accent-orange)', color: '#000', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                      {formKey ? 'Save Changes' : 'Register Key'}
+                    </button>
+                    {formKey && (
+                      <button type="button" onClick={resetForm} style={{ padding: '8px 16px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                        Cancel Edit
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              {/* Keys Table */}
+              <h4 style={{ fontSize: '1rem', marginBottom: 12, color: 'var(--text-primary)' }}>🔑 All Active API Keys</h4>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                      <th style={{ textAlign: 'left', padding: '10px 8px' }}>Owner</th>
+                      <th style={{ textAlign: 'left', padding: '10px 8px' }}>API Key</th>
+                      <th style={{ textAlign: 'center', padding: '10px 8px' }}>Limit</th>
+                      <th style={{ textAlign: 'center', padding: '10px 8px' }}>Predictions</th>
+                      <th style={{ textAlign: 'center', padding: '10px 8px' }}>Role</th>
+                      <th style={{ textAlign: 'right', padding: '10px 8px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {info.all_keys && info.all_keys.map((k) => {
+                      const isVisible = visibleKeys[k.key];
+                      return (
+                        <tr key={k.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text-primary)' }}>{k.owner}</td>
+                          <td style={{ padding: '10px 8px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span>{isVisible ? k.key : '••••••••••••••••••••••••'}</span>
+                              <button
+                                onClick={() => toggleKeyVisibility(k.key)}
+                                style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.75rem', padding: 2 }}
+                                title={isVisible ? "Hide API Key" : "Show API Key"}
+                              >
+                                {isVisible ? '🙈' : '👁️'}
+                              </button>
+                            </div>
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'center', color: k.rate_limit < 0 ? 'var(--accent-green)' : 'var(--text-primary)' }}>
+                            {k.rate_limit < 0 ? 'Unlimited' : k.rate_limit}
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>
+                            {k.stats?.total_predictions || 0}
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                            {k.admin ? '👑 Admin' : 'User'}
+                          </td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => handleEditKey(k)}
+                              style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', marginRight: 10, fontSize: '0.8rem', fontWeight: 600 }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              disabled={k.key === 'v25_stelios_unlimited_a28b6d39c04f5e71'}
+                              onClick={() => handleDeleteKey(k.key)}
+                              style={{ background: 'none', border: 'none', color: k.key === 'v25_stelios_unlimited_a28b6d39c04f5e71' ? 'var(--text-muted)' : 'var(--accent-red)', cursor: k.key === 'v25_stelios_unlimited_a28b6d39c04f5e71' ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
 
