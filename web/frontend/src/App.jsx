@@ -219,7 +219,7 @@ function UsagePage() {
   const [visibleKeys, setVisibleKeys] = useState({})
 
   // Admin global config state
-  const [formConcurrency, setFormConcurrency] = useState(100)
+  const [formConcurrency, setFormConcurrency] = useState('')
   const [concurrencySuccess, setConcurrencySuccess] = useState(null)
   const [concurrencyError, setConcurrencyError] = useState(null)
 
@@ -231,7 +231,7 @@ function UsagePage() {
           const res = await fetch(`/api/admin/config?api_key=${encodeURIComponent(apiKey)}`)
           if (res.ok) {
             const data = await res.json()
-            setFormConcurrency(data.concurrency_limit)
+            setFormConcurrency(data.concurrency_limit.toString())
           }
         } catch (e) {
           // ignore
@@ -246,6 +246,12 @@ function UsagePage() {
     setConcurrencySuccess(null)
     setConcurrencyError(null)
 
+    const parsedLimit = parseInt(formConcurrency)
+    if (isNaN(parsedLimit) || parsedLimit < 1) {
+      setConcurrencyError('Please enter a valid positive number for the concurrency limit.')
+      return
+    }
+
     try {
       const res = await fetch(`/api/admin/config?api_key=${encodeURIComponent(apiKey)}`, {
         method: 'POST',
@@ -254,7 +260,7 @@ function UsagePage() {
           'X-API-Key': apiKey
         },
         body: JSON.stringify({
-          concurrency_limit: formConcurrency
+          concurrency_limit: parsedLimit
         })
       })
 
@@ -576,7 +582,7 @@ function UsagePage() {
                       min="1"
                       max="5000"
                       value={formConcurrency}
-                      onChange={(e) => setFormConcurrency(parseInt(e.target.value) || 1)}
+                      onChange={(e) => setFormConcurrency(e.target.value)}
                       style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem' }}
                     />
                   </div>
