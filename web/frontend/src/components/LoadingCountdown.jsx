@@ -13,15 +13,65 @@ const STAGES = [
   { at: 74, label: 'Almost there...' },
 ]
 
-export default function LoadingCountdown() {
+export default function LoadingCountdown({ isQueued }) {
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
+    if (isQueued) return
+
     const interval = setInterval(() => {
       setElapsed((prev) => prev + 1)
     }, 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [isQueued])
+
+  if (isQueued) {
+    return (
+      <div className="loading-overlay">
+        <div className="countdown-ring">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle
+              cx="50" cy="50" r="42"
+              fill="none"
+              stroke="var(--border)"
+              strokeWidth="5"
+            />
+            <circle
+              cx="50" cy="50" r="42"
+              fill="none"
+              stroke="var(--accent-orange)"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 42}`}
+              strokeDashoffset={`${2 * Math.PI * 42 * 0.75}`}
+              transform="rotate(-90 50 50)"
+              style={{ 
+                transformOrigin: '50% 50%',
+                animation: 'spin 1.5s linear infinite' 
+              }}
+            />
+          </svg>
+          <div className="countdown-number" style={{ color: 'var(--accent-orange)' }}>
+            Q
+          </div>
+        </div>
+
+        <div className="loading-text" style={{ color: 'var(--accent-orange)' }}>👥 Request Queued...</div>
+        <div className="loading-subtext">Waiting for an available evaluation slot (limit is 100 concurrent)</div>
+
+        <div className="loading-progress-bar" style={{ background: 'rgba(255, 140, 0, 0.1)' }}>
+          <div
+            className="loading-progress-fill"
+            style={{ width: '100%', background: 'var(--accent-orange)', animation: 'pulse 1.5s infinite' }}
+          />
+        </div>
+
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 20 }}>
+          The timer and multi-agent pipeline will automatically start as soon as your slot opens.
+        </div>
+      </div>
+    )
+  }
 
   const remaining = Math.max(0, ESTIMATE_SECONDS - elapsed)
   const progress = Math.min(100, (elapsed / ESTIMATE_SECONDS) * 100)

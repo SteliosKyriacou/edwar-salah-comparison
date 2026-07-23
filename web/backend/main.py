@@ -83,6 +83,9 @@ _concurrency_semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
 _evaluating_count = 0
 _queued_count = 0
 
+_key_evaluating_counts = {}  # { api_key: count }
+_key_queued_counts = {}      # { api_key: count }
+
 
 def _authenticate_and_rate_limit(request: Request) -> dict:
     """Authenticate request using X-API-Key header or query parameter.
@@ -174,6 +177,7 @@ class AnalyzeRequest(BaseModel):
     indication: str
     auxiliary: str = ""
     web_search: bool = False
+    mock: bool = False
 
 
 @app.get("/api/health")
@@ -327,8 +331,8 @@ def get_usage(request: Request):
         "remaining": remaining,
         "window": rate_window,
         "admin": is_admin,
-        "evaluating_now": _evaluating_count,
-        "queued_now": _queued_count,
+        "evaluating_now": _key_evaluating_counts.get(api_key, 0),
+        "queued_now": _key_queued_counts.get(api_key, 0),
         "stats": stats
     }
 
@@ -460,28 +464,53 @@ async def analyze(req: AnalyzeRequest, request: Request):
         raise HTTPException(400, "Indication is required")
 
     # Tracking queued and evaluating states with cancellation safety
+    api_key = key_info["key"]
     _queued_count += 1
+    _key_queued_counts[api_key] = _key_queued_counts.get(api_key, 0) + 1
     queued_decremented = False
     try:
         async with _concurrency_semaphore:
             _queued_count -= 1
+            _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
             queued_decremented = True
             _evaluating_count += 1
+            _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 1
             try:
-                # Run the CPU/network-bound pipeline in a threadpool
-                result = await asyncio.to_thread(
-                    run_pipeline,
-                    req.smiles.strip(),
-                    req.target.strip(),
-                    req.indication.strip(),
-                    req.auxiliary.strip(),
-                    web_search=req.web_search,
-                )
+                if req.mock:
+                    # Simulate a 5-second analysis
+                    await asyncio.sleep(5)
+                    result = {
+                        "overview": {
+                            "medchem_score": 42,
+                            "tcsp": 0.15,
+                            "final_p1": 0.6, "final_p2": 0.5, "final_p3": 0.5,
+                            "rationale": "Mock analysis for testing.",
+                            "metabolic_stability": "Medium",
+                            "toxic_fragments": "None",
+                            "structural_assessment": "Clean"
+                        },
+                        "biology": {"verdict": "ELITE", "rationale": "Mock bio rationale"},
+                        "toxicology": {"verdict": "CLEAN", "rationale": "Mock tox rationale"},
+                        "pharmacology": {"verdict": "FAVORABLE", "rationale": "Mock pk rationale"},
+                        "medchem": {"chem_p1": 0.6, "chem_p2": 0.5, "chem_p3": 0.5}
+                    }
+                else:
+                    # Run the CPU/network-bound pipeline in a threadpool
+                    result = await asyncio.to_thread(
+                        run_pipeline,
+                        req.smiles.strip(),
+                        req.target.strip(),
+                        req.indication.strip(),
+                        req.auxiliary.strip(),
+                        web_search=req.web_search,
+                    )
             finally:
                 _evaluating_count -= 1
+                _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 1)
     finally:
         if not queued_decremented:
             _queued_count -= 1
+            _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
 
     # Record successful usage
     _record_key_usage(key_info["key"], key_info["rate_limit"])

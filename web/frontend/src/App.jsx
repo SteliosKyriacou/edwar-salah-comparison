@@ -13,8 +13,34 @@ export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('v25_api_key') || '')
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [isQueued, setIsQueued] = useState(false)
   const [error, setError] = useState(null)
   const resultsRef = useRef(null)
+
+  // Polling for queue state while loading
+  useEffect(() => {
+    if (!loading) {
+      setIsQueued(false)
+      return
+    }
+
+    async function pollStatus() {
+      try {
+        const res = await fetch(`/api/usage?api_key=${encodeURIComponent(apiKey)}`)
+        if (res.ok) {
+          const data = await res.json()
+          // If queued_now is greater than 0, it means our request is still in the queue!
+          setIsQueued(data.queued_now > 0)
+        }
+      } catch (e) {
+        // ignore errors during background polling
+      }
+    }
+
+    pollStatus()
+    const interval = setInterval(pollStatus, 1500)
+    return () => clearInterval(interval)
+  }, [loading, apiKey])
 
   // Router check
   if (window.location.pathname === '/usage') {
@@ -23,6 +49,7 @@ export default function App() {
 
   async function handleSubmit(formData) {
     setLoading(true)
+    setIsQueued(true) // assume starting in queue state if server has any load
     setError(null)
     setResult(null)
 
@@ -78,7 +105,7 @@ export default function App() {
 
         <InputForm onSubmit={handleSubmit} loading={loading} />
 
-        {loading && <LoadingCountdown />}
+        {loading && <LoadingCountdown isQueued={isQueued} />}
 
         {error && <div className="error-msg">{error}</div>}
 
