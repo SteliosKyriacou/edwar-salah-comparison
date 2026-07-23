@@ -173,6 +173,37 @@ STATS_LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
 STATS_LOG_FILE = os.path.join(STATS_LOG_DIR, "api_key_stats.jsonl")
 
 
+def _prime_rate_limiter_cache():
+    """Prime the in-memory rate limiter cache from the on-disk statistics log."""
+    if not os.path.exists(STATS_LOG_FILE):
+        return
+    try:
+        with open(STATS_LOG_FILE, "r") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    entry = json.loads(line)
+                    api_key = entry.get("api_key")
+                    ts_str = entry.get("timestamp")
+                    if api_key and ts_str:
+                        dt = datetime.fromisoformat(ts_str)
+                        epoch = dt.timestamp()
+
+                        if api_key not in _key_usage_timestamps:
+                            _key_usage_timestamps[api_key] = []
+                        _key_usage_timestamps[api_key].append(epoch)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+@app.on_event("startup")
+def startup_event():
+    _prime_rate_limiter_cache()
+
+
 def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str):
     """Log prediction details for API Key statistics."""
     from datetime import datetime
