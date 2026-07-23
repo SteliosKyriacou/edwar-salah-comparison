@@ -279,6 +279,14 @@ function UsagePage() {
                 {info.remaining === 'unlimited' ? 'Unlimited' : `${info.remaining} predictions`}
               </span>
             </div>
+            <div className="usage-item" style={{ borderTop: '1px dashed var(--border)', marginTop: 8, paddingTop: 12 }}>
+              <span className="usage-label" style={{ color: 'var(--accent-cyan)' }}>⏳ Currently Evaluating:</span>
+              <span className="usage-value" style={{ color: 'var(--accent-cyan)' }}>{info.evaluating_now ?? 0}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label" style={{ color: 'var(--accent-orange)' }}>👥 In Queue:</span>
+              <span className="usage-value" style={{ color: 'var(--accent-orange)' }}>{info.queued_now ?? 0}</span>
+            </div>
           </div>
 
           <div className="usage-card">

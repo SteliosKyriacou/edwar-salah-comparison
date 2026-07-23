@@ -74,6 +74,15 @@ KEYS_FILE = os.path.join(os.path.dirname(__file__), "..", "keys.json")
 # Dynamic key-specific sliding window tracking
 _key_usage_timestamps = {}  # { "api_key": [timestamp1, timestamp2, ...] }
 
+import asyncio
+
+# Concurrency Semaphore (max 100 concurrent pipeline runs across all API keys)
+CONCURRENCY_LIMIT = 100
+_concurrency_semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+
+_evaluating_count = 0
+_queued_count = 0
+
 
 def _authenticate_and_rate_limit(request: Request) -> dict:
     """Authenticate request using X-API-Key header or query parameter.
@@ -273,6 +282,8 @@ def get_usage(request: Request):
         "usage": usage_count,
         "remaining": remaining,
         "window": rate_window,
+        "evaluating_now": _evaluating_count,
+        "queued_now": _queued_count,
         "stats": stats
     }
 
@@ -288,7 +299,8 @@ def dashboard():
 
 
 @app.post("/api/analyze")
-def analyze(req: AnalyzeRequest, request: Request):
+async def analyze(req: AnalyzeRequest, request: Request):
+    global _evaluating_count, _queued_count
     # Authenticate and rate limit via API Key
     key_info = _authenticate_and_rate_limit(request)
 
@@ -301,16 +313,29 @@ def analyze(req: AnalyzeRequest, request: Request):
     if not req.indication.strip():
         raise HTTPException(400, "Indication is required")
 
+    # Tracking queued and evaluating states with cancellation safety
+    _queued_count += 1
+    queued_decremented = False
     try:
-        result = run_pipeline(
-            req.smiles.strip(),
-            req.target.strip(),
-            req.indication.strip(),
-            req.auxiliary.strip(),
-            web_search=req.web_search,
-        )
-    except Exception as e:
-        raise HTTPException(500, f"Pipeline error: {e}")
+        async with _concurrency_semaphore:
+            _queued_count -= 1
+            queued_decremented = True
+            _evaluating_count += 1
+            try:
+                # Run the CPU/network-bound pipeline in a threadpool
+                result = await asyncio.to_thread(
+                    run_pipeline,
+                    req.smiles.strip(),
+                    req.target.strip(),
+                    req.indication.strip(),
+                    req.auxiliary.strip(),
+                    web_search=req.web_search,
+                )
+            finally:
+                _evaluating_count -= 1
+    finally:
+        if not queued_decremented:
+            _queued_count -= 1
 
     # Record successful usage
     _record_key_usage(key_info["key"], key_info["rate_limit"])
