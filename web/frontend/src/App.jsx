@@ -361,12 +361,12 @@ export default function App() {
                 <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital certificate signed by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify that this assessment is authentic, has not been modified, and was certified on this exact date:
                 <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <li>Visit the public V25 Verification Portal at: <strong style={{ color: 'var(--accent-blue)' }}>http://136.119.133.178:4003/verify</strong> and enter the SHA-256 fingerprint shown above. This will instantly query the immutable server logs to verify all assessment details.</li>
-                  <li>Alternatively, click <strong>Download TSR Signature</strong> to download the binary <code>.tsr</code> file and verify it directly via OpenSSL:
+                  <li>Alternatively, click <strong>Download Manifest</strong> and <strong>Download TSR Signature</strong>, and audit them together using this OpenSSL command:
                     <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
-                      openssl ts -reply -in V25_TSA_Certificate.tsr -text
+                      openssl ts -verify -data V25_Prediction_Manifest.txt -in V25_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
                     </code>
                   </li>
-                  <li>This command uses standard public key cryptography to prove that this exact fingerprint was officially registered by DigiCert's root servers at this precise atomic time.</li>
+                  <li>This command uses public key cryptography to verify the DigiCert signature chain and mathematically prove that this exact fingerprint existed at this precise atomic time.</li>
                 </ol>
               </div>
             </div>
