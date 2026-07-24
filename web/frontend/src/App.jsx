@@ -1192,7 +1192,7 @@ function VerifyPage() {
                 <li>Click <strong>Download TSR Signature</strong> to download the binary <code>V25_TSA_Certificate.tsr</code> signature token.</li>
                 <li>Audit both files together to prove mathematical authenticity using OpenSSL:
                   <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
-                    openssl ts -verify -data V25_Prediction_Manifest.txt -in V25_TSA_Certificate.tsr
+                    openssl ts -verify -data V25_Prediction_Manifest.txt -in V25_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
                   </code>
                 </li>
                 <li>A successful output prints <code>Verification: OK</code>, certifying that this exact prediction manifest was officially signed by DigiCert on this specific date.</li>
