@@ -271,11 +271,15 @@ export default function App() {
               </div>
 
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16 }}>
-                <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital fingerprint (SHA-256) certified by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify, a third-party auditor can:
+                <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital certificate signed by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify that the fingerprint is authentic and points to this exact date:
                 <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <li>Recalculate the SHA-256 hash using the raw assessment properties (SMILES, Target, Indication, Score, and Owner).</li>
-                  <li>Compare it against the fingerprint above to prove zero-tampering since creation.</li>
-                  <li>Verify the downloaded <code>.tsr</code> certificate file using OpenSSL (<code>openssl ts -reply -in V25_TSA_Certificate.tsr -text</code>) to mathematically prove the document existed at the precise atomic time certified by DigiCert.</li>
+                  <li>Click <strong>Download TSR Signature</strong> to download the official <code>.tsr</code> certificate file.</li>
+                  <li>Verify the downloaded file using standard tools, such as running this OpenSSL command:
+                    <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
+                      openssl ts -reply -in V25_TSA_Certificate.tsr -text
+                    </code>
+                  </li>
+                  <li>This will print out the official DigiCert signature, confirming that this exact <strong>Verification Fingerprint (SHA-256)</strong> was permanently logged at the precise atomic time certified by DigiCert.</li>
                 </ol>
               </div>
             </div>
