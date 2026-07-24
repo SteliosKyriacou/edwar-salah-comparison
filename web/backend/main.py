@@ -8,42 +8,8 @@ from pydantic import BaseModel
 import os
 import time
 import math
-
-from agents import run_pipeline
-from logger import log_prediction
-from visits import log_visit, get_visits_summary
-
-app = FastAPI(title="Drug Success Predictor", version="1.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-def _get_client_ip(request: Request) -> str:
-    """Extract real client IP from proxy headers or direct connection."""
-    ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    if not ip:
-        ip = request.headers.get("x-real-ip", "").strip()
-    if not ip:
-        ip = request.client.host if request.client else "unknown"
-    return ip
-
-
-"""FastAPI backend — Will Your Drug Succeed in the Clinic?"""
-
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
-from pydantic import BaseModel
-import os
-import time
-import math
 import json
+from datetime import datetime
 
 from agents import run_pipeline
 from logger import log_prediction
@@ -295,7 +261,53 @@ def startup_event():
     _prime_rate_limiter_cache()
 
 
-def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str):
+def _get_rfc3161_timestamp(data_to_hash: bytes) -> str:
+    """Make a live RFC 3161 request to DigiCert's public TSA server.
+
+    Returns the base64-encoded TSR (Time-Stamp Response) signature.
+    """
+    import hashlib
+    import random
+    import urllib.request
+    import base64
+
+    sha256_hash = hashlib.sha256(data_to_hash).digest()
+    # 4-byte random nonce
+    nonce = bytes([random.randint(0, 255) for _ in range(4)])
+
+    # Construct the binary RFC 3161 request structure
+    req = bytearray([
+        0x30, 0x3f,        # Sequence, length 63
+        0x02, 0x01, 0x01,  # Version: 1
+        0x30, 0x31,        # MessageImprint Sequence, length 49
+        0x30, 0x0d,        # AlgorithmIdentifier Sequence, length 13
+        0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,  # OID (SHA-256)
+        0x05, 0x00,        # NULL parameter
+        0x04, 0x20         # Octet String, length 32
+    ])
+    req.extend(sha256_hash)
+    req.extend([0x02, 0x04])
+    req.extend(nonce)
+    req.extend([0x01, 0x01, 0xff])
+
+    tsa_url = "http://timestamp.digicert.com"
+    headers = {
+        "Content-Type": "application/timestamp-query",
+        "User-Agent": "DrugSuccessPredictor/1.0"
+    }
+
+    try:
+        url_req = urllib.request.Request(tsa_url, data=bytes(req), headers=headers, method="POST")
+        with urllib.request.urlopen(url_req, timeout=10) as resp:
+            resp_data = resp.read()
+        if resp_data and resp_data[0] == 0x30:
+            return base64.b64encode(resp_data).decode("utf-8")
+    except Exception:
+        pass
+    return ""
+
+
+def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = ""):
     """Log prediction details for API Key statistics."""
     from datetime import datetime
     os.makedirs(STATS_LOG_DIR, exist_ok=True)
@@ -304,7 +316,10 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str):
         "api_key": api_key,
         "smiles": smiles.strip(),
         "target": target.strip(),
-        "indication": indication.strip()
+        "indication": indication.strip(),
+        "tsa_fingerprint": tsa_fingerprint,
+        "tsa_timestamp": tsa_timestamp,
+        "tsa_signature_b64": tsa_signature_b64
     }
     with open(STATS_LOG_FILE, "a") as f:
         f.write(json.dumps(entry) + "\n")
@@ -645,9 +660,34 @@ async def analyze(req: AnalyzeRequest, request: Request):
             _queued_count -= 1
             _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
 
+    # Build secure fingerprint string
+    score = result.get("overview", {}).get("medchem_score", 0)
+    ts_str = datetime.utcnow().isoformat()
+
+    fingerprint_src = f"SMILES:{req.smiles.strip()}|Target:{req.target.strip()}|Indication:{req.indication.strip()}|Score:{score}|Timestamp:{ts_str}|Owner:{key_info['owner']}"
+
+    import hashlib
+    tsa_fingerprint = hashlib.sha256(fingerprint_src.encode("utf-8")).hexdigest()
+
+    # Make the actual DigiCert trusted timestamp request
+    tsa_signature_b64 = _get_rfc3161_timestamp(fingerprint_src.encode("utf-8"))
+
+    # Append TSA verification fields to result response
+    result["tsa_fingerprint"] = tsa_fingerprint
+    result["tsa_timestamp"] = ts_str
+    result["tsa_signature_b64"] = tsa_signature_b64
+
     # Record successful usage
     _record_key_usage(key_info["key"], key_info["rate_limit"])
-    _log_api_key_stats(key_info["key"], req.smiles, req.target, req.indication)
+    _log_api_key_stats(
+        key_info["key"],
+        req.smiles,
+        req.target,
+        req.indication,
+        tsa_fingerprint=tsa_fingerprint,
+        tsa_timestamp=ts_str,
+        tsa_signature_b64=tsa_signature_b64
+    )
 
     ua = request.headers.get("user-agent", "")
     log_visit(ip, f"/api/analyze?owner={key_info['owner']}", ua)

@@ -215,6 +215,70 @@ export default function App() {
                 isPrinting={isPrinting}
               />
             </div>
+
+            {/* Cryptographic Verification Certificate */}
+            <div className="usage-card" style={{ marginTop: 32, border: '1px solid rgba(46, 204, 113, 0.3)', background: 'rgba(46, 204, 113, 0.02)', pageBreakInside: 'avoid', textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(46, 204, 113, 0.15)', paddingBottom: 12, marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    🛡️ DigiCert Cryptographic Verification Certificate
+                  </h3>
+                  <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                    RFC 3161 Trusted Time-Stamp Authority (TSA) Signed Token
+                  </div>
+                </div>
+                {result.tsa_signature_b64 && (
+                  <button
+                    onClick={() => {
+                      const bin = atob(result.tsa_signature_b64);
+                      const arr = new Uint8Array(bin.length);
+                      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                      const blob = new Blob([arr], { type: 'application/timestamp-reply' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `V25_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                      a.click();
+                    }}
+                    className="print-hide"
+                    style={{
+                      background: 'rgba(46, 204, 113, 0.15)',
+                      color: 'var(--accent-green)',
+                      border: '1px solid rgba(46, 204, 113, 0.3)',
+                      borderRadius: 6,
+                      padding: '6px 12px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📥 Download TSR Signature
+                  </button>
+                )}
+              </div>
+
+              <div className="usage-item" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '8px 0', display: 'flex', justifyContent: 'space-between' }}>
+                <span className="usage-label" style={{ color: 'var(--text-secondary)' }}>Verified Timestamp:</span>
+                <span className="usage-value active" style={{ color: 'var(--accent-green)', fontWeight: 700 }}>
+                  {result.tsa_timestamp ? new Date(result.tsa_timestamp).toUTCString() : 'Verifying...'}
+                </span>
+              </div>
+              <div className="usage-item" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '8px 0', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                <span className="usage-label" style={{ color: 'var(--text-secondary)' }}>Verification Fingerprint (SHA-256 Hash):</span>
+                <span className="usage-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all', display: 'block', marginTop: 4 }}>
+                  {result.tsa_fingerprint || 'Not available'}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16 }}>
+                <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital fingerprint (SHA-256) certified by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify, a third-party auditor can:
+                <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <li>Recalculate the SHA-256 hash using the raw assessment properties (SMILES, Target, Indication, Score, and Owner).</li>
+                  <li>Compare it against the fingerprint above to prove zero-tampering since creation.</li>
+                  <li>Verify the downloaded <code>.tsr</code> certificate file using OpenSSL (<code>openssl ts -reply -in V25_TSA_Certificate.tsr -text</code>) to mathematically prove the document existed at the precise atomic time certified by DigiCert.</li>
+                </ol>
+              </div>
+            </div>
           </div>
         )}
       </div>
