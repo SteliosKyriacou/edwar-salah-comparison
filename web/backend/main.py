@@ -586,6 +586,86 @@ def update_admin_config(req: AdminConfigRequest, request: Request):
     return {"status": "success", "concurrency_limit": new_limit}
 
 
+@app.post("/api/admin/backup")
+def run_backup(request: Request):
+    # Verify the requester is an admin
+    api_key = request.headers.get("x-api-key") or request.query_params.get("api_key")
+    if not api_key:
+        raise HTTPException(401, "API Key is required")
+
+    if not os.path.exists(KEYS_FILE):
+        raise HTTPException(500, "API Keys storage not found.")
+
+    try:
+        with open(KEYS_FILE, "r") as f:
+            keys = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading API Keys storage: {e}")
+
+    if api_key not in keys or not keys[api_key].get("admin"):
+        raise HTTPException(403, "Access denied. Admin privileges required.")
+
+    # Call backup.sh
+    import subprocess
+    script_path = os.path.join(os.path.dirname(__file__), "..", "backup.sh")
+    try:
+        proc = subprocess.run([script_path], capture_output=True, text=True, check=True)
+        stdout = proc.stdout
+        # Check if upload was successful or had warnings (like permission issues)
+        if "Warning" in proc.stderr or "Warning" in proc.stdout or "failed" in proc.stdout.lower():
+            # Backup succeeded locally but GCS upload failed
+            return {
+                "status": "warning",
+                "message": "Database backup completed locally, but Google Cloud Storage upload failed. Please verify that the Compute Engine Service Account has write access to the bucket.",
+                "details": stdout + "\n" + proc.stderr
+            }
+        return {
+            "status": "success",
+            "message": "Database backup completed successfully and uploaded to Google Cloud Storage (reneu001/timestamps-database-backup)!",
+            "details": stdout
+        }
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, f"Backup failed: {e.stderr or e.stdout}")
+    except Exception as e:
+        raise HTTPException(500, f"Failed to execute backup script: {e}")
+
+
+@app.get("/api/verify")
+def verify_prediction(hash: str):
+    target_hash = hash.strip()
+    if not target_hash:
+        raise HTTPException(400, "Hash parameter is required")
+
+    if not os.path.exists(STATS_LOG_FILE):
+        raise HTTPException(404, "No evaluations recorded on this server.")
+
+    try:
+        with open(STATS_LOG_FILE, "r") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    entry = json.loads(line)
+                    if entry.get("tsa_fingerprint") == target_hash:
+                        return {
+                            "found": True,
+                            "owner": entry.get("owner") or "Registered User",
+                            "timestamp": entry.get("timestamp"),
+                            "smiles": entry.get("smiles"),
+                            "target": entry.get("target"),
+                            "indication": entry.get("indication"),
+                            "tsa_fingerprint": entry.get("tsa_fingerprint"),
+                            "tsa_timestamp": entry.get("tsa_timestamp"),
+                            "tsa_signature_b64": entry.get("tsa_signature_b64")
+                        }
+                except Exception:
+                    pass
+    except Exception as e:
+        raise HTTPException(500, f"Error searching database: {e}")
+
+    raise HTTPException(404, "Evaluation not found. Please verify the SHA-256 fingerprint.")
+
+
 @app.get("/api/visits")
 def visits():
     return get_visits_summary()

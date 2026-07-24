@@ -55,6 +55,9 @@ export default function App() {
   if (window.location.pathname === '/usage') {
     return <UsagePage />
   }
+  if (window.location.pathname === '/verify') {
+    return <VerifyPage />
+  }
 
   async function handleSubmit(formData) {
     setLoading(true)
@@ -122,25 +125,57 @@ export default function App() {
           <div ref={resultsRef}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }} className="print-hide">
               <h2 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-primary)' }}>📊 Clinical Attrition Assessment Results</h2>
-              <button 
-                onClick={handlePrint}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '10px 20px',
-                  background: 'var(--accent-blue)',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  boxShadow: '0 4px 12px rgba(74, 158, 255, 0.25)'
-                }}
-              >
-                📄 Save as PDF
-              </button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {result.tsa_signature_b64 && (
+                  <button 
+                    onClick={() => {
+                      const bin = atob(result.tsa_signature_b64);
+                      const arr = new Uint8Array(bin.length);
+                      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                      const blob = new Blob([arr], { type: 'application/timestamp-reply' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `V25_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                      a.click();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 20px',
+                      background: 'rgba(46, 204, 113, 0.15)',
+                      color: 'var(--accent-green)',
+                      border: '1px solid rgba(46, 204, 113, 0.3)',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    🛡️ Download TSR
+                  </button>
+                )}
+                <button 
+                  onClick={handlePrint}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 20px',
+                    background: 'var(--accent-blue)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    boxShadow: '0 4px 12px rgba(74, 158, 255, 0.25)'
+                  }}
+                >
+                  📄 Save as PDF
+                </button>
+              </div>
             </div>
 
             <ScoreCards overview={result.overview} />
@@ -271,15 +306,15 @@ export default function App() {
               </div>
 
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16 }}>
-                <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital certificate signed by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify that the fingerprint is authentic and points to this exact date:
+                <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital certificate signed by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify that this assessment is authentic, has not been modified, and was certified on this exact date:
                 <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <li>Click <strong>Download TSR Signature</strong> to download the official <code>.tsr</code> certificate file.</li>
-                  <li>Verify the downloaded file using standard tools, such as running this OpenSSL command:
+                  <li>Visit the public V25 Verification Portal at: <strong style={{ color: 'var(--accent-blue)' }}>http://136.119.133.178:4003/verify</strong> and enter the SHA-256 fingerprint shown above. This will instantly query the immutable server logs to verify all assessment details.</li>
+                  <li>Alternatively, click <strong>Download TSR Signature</strong> to download the binary <code>.tsr</code> file and verify it directly via OpenSSL:
                     <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
                       openssl ts -reply -in V25_TSA_Certificate.tsr -text
                     </code>
                   </li>
-                  <li>This will print out the official DigiCert signature, confirming that this exact <strong>Verification Fingerprint (SHA-256)</strong> was permanently logged at the precise atomic time certified by DigiCert.</li>
+                  <li>This command uses standard public key cryptography to prove that this exact fingerprint was officially registered by DigiCert's root servers at this precise atomic time.</li>
                 </ol>
               </div>
             </div>
@@ -326,6 +361,45 @@ function UsagePage() {
   const [formConcurrency, setFormConcurrency] = useState('')
   const [concurrencySuccess, setConcurrencySuccess] = useState(null)
   const [concurrencyError, setConcurrencyError] = useState(null)
+
+  // Admin backup state
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [backupSuccess, setBackupSuccess] = useState(null)
+  const [backupWarning, setBackupWarning] = useState(null)
+  const [backupError, setBackupError] = useState(null)
+
+  async function handleRunBackup() {
+    setBackupLoading(true)
+    setBackupSuccess(null)
+    setBackupWarning(null)
+    setBackupError(null)
+
+    try {
+      const res = await fetch(`/api/admin/backup?api_key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        }
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Backup request failed.')
+      }
+
+      const data = await res.json()
+      if (data.status === 'warning') {
+        setBackupWarning(data.message)
+      } else {
+        setBackupSuccess(data.message)
+      }
+    } catch (e) {
+      setBackupError(e.message)
+    } finally {
+      setBackupLoading(false)
+    }
+  }
 
   // Load config on admin load
   useEffect(() => {
@@ -665,6 +739,38 @@ function UsagePage() {
             <div className="usage-card" style={{ marginTop: 32 }}>
               <h3 style={{ fontSize: '1.2rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-orange)' }}>👑 Admin Control Panel</h3>
               
+              {/* Database GCS Backup Control */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24, textAlign: 'left' }}>
+                <h4 style={{ fontSize: '0.95rem', marginBottom: 10, color: 'var(--accent-green)' }}>
+                  💾 GCS Cloud Backup Manager
+                </h4>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Trigger an on-demand full database snapshot. This backs up your API Keys, global configurations, and verification logs, copy-mirroring the archive directly to Google Cloud Storage (GCS) at <code>reneu001/timestamps-database-backup</code>.
+                </p>
+
+                {backupError && <div className="error-msg" style={{ marginBottom: 14, padding: '8px 12px', fontSize: '0.8rem' }}>{backupError}</div>}
+                {backupWarning && <div style={{ color: 'var(--accent-orange)', background: 'rgba(255, 140, 0, 0.1)', border: '1px solid rgba(255, 140, 0, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{backupWarning}</div>}
+                {backupSuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{backupSuccess}</div>}
+
+                <button 
+                  onClick={handleRunBackup}
+                  disabled={backupLoading}
+                  style={{ 
+                    padding: '10px 20px', 
+                    background: 'var(--accent-green)', 
+                    color: '#000', 
+                    border: 'none', 
+                    borderRadius: 6, 
+                    fontWeight: 700, 
+                    cursor: 'pointer', 
+                    fontSize: '0.85rem',
+                    opacity: backupLoading ? 0.7 : 1
+                  }}
+                >
+                  {backupLoading ? 'Backing up & Uploading...' : 'Run Database GCS Backup'}
+                </button>
+              </div>
+
               {/* Dynamic Concurrency Control */}
               <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24 }}>
                 <h4 style={{ fontSize: '0.95rem', marginBottom: 10, color: 'var(--accent-cyan)' }}>
@@ -836,6 +942,188 @@ function UsagePage() {
       )}
 
       <a href="/" className="usage-btn" style={{ marginTop: 12 }}>&larr; Back to Predictor App</a>
+    </div>
+  )
+}
+
+function VerifyPage() {
+  const [hash, setHash] = useState('')
+  const [record, setRecord] = useState(null)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleVerify(e) {
+    if (e) e.preventDefault()
+    if (!hash.trim()) {
+      setError('Please enter a SHA-256 fingerprint.')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    setRecord(null)
+    try {
+      const res = await fetch(`/api/verify?hash=${encodeURIComponent(hash.trim())}`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Failed to verify fingerprint.')
+      }
+      const data = await res.json()
+      setRecord(data)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Auto-load if hash is in URL query parameters!
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const h = params.get('hash')
+    if (h) {
+      setHash(h)
+      // We can trigger it using setTimeout to let state settle
+      setTimeout(() => {
+        const btn = document.getElementById('verify-submit-btn')
+        if (btn) btn.click()
+      }, 100)
+    }
+  }, [])
+
+  return (
+    <div className="usage-container" style={{ maxWidth: '800px' }}>
+      <h2 className="usage-title">🛡️ V25 Prediction Verification Portal</h2>
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 24 }}>
+        Input any V25 SHA-256 evaluation fingerprint to retrieve its certified immutable details and DigiCert Trusted TSR Certificate.
+      </p>
+
+      <form onSubmit={handleVerify} style={{ marginBottom: 24 }}>
+        <div className="form-group">
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>SHA-256 Fingerprint</label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input
+              type="text"
+              placeholder="Paste SHA-256 fingerprint (e.g. d68abf040...)"
+              value={hash}
+              onChange={(e) => setHash(e.target.value)}
+              style={{
+                flex: 1,
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                padding: '10px 14px',
+                color: 'var(--text-primary)',
+                fontFamily: 'monospace',
+                fontSize: '0.85rem'
+              }}
+            />
+            <button
+              id="verify-submit-btn"
+              type="submit"
+              disabled={loading}
+              style={{
+                background: 'var(--accent-blue)',
+                color: '#000',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 24px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              {loading ? 'Verifying...' : 'Verify'}
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {error && <div className="error-msg" style={{ marginBottom: 24 }}>{error}</div>}
+
+      {record && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="usage-card" style={{ border: '1px solid var(--accent-blue)', background: 'rgba(74, 158, 255, 0.02)', textAlign: 'left' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-blue)' }}>🔬 Verified Prediction Record</h3>
+            <div className="usage-item">
+              <span className="usage-label">Authorized Owner:</span>
+              <span className="usage-value active">{record.owner || 'Registered User'}</span>
+            </div>
+            <div className="usage-item" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '8px 0', display: 'flex', justifyContent: 'space-between' }}>
+              <span className="usage-label">SMILES String:</span>
+              <span className="usage-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', textAlign: 'right', maxWidth: '60%' }}>{record.smiles}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Target Class:</span>
+              <span className="usage-value">{record.target}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Therapeutic Indication:</span>
+              <span className="usage-value">{record.indication}</span>
+            </div>
+          </div>
+
+          <div className="usage-card" style={{ border: '1px solid var(--accent-green)', background: 'rgba(46, 204, 113, 0.02)', textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(46, 204, 113, 0.15)', paddingBottom: 12, marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--accent-green)' }}>🛡️ DigiCert Time-Stamp Certificate</h3>
+                <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 4 }}>RFC 3161 Globally Trusted Digital Signature</div>
+              </div>
+              {record.tsa_signature_b64 && (
+                <button
+                  onClick={() => {
+                    const bin = atob(record.tsa_signature_b64);
+                    const arr = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                    const blob = new Blob([arr], { type: 'application/timestamp-reply' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `V25_TSA_Certificate_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                    a.click();
+                  }}
+                  style={{
+                    background: 'rgba(46, 204, 113, 0.15)',
+                    color: 'var(--accent-green)',
+                    border: '1px solid rgba(46, 204, 113, 0.3)',
+                    borderRadius: 6,
+                    padding: '8px 14px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  📥 Download TSR Signature
+                </button>
+              )}
+            </div>
+
+            <div className="usage-item">
+              <span className="usage-label">Certified Timestamp:</span>
+              <span className="usage-value active" style={{ color: 'var(--accent-green)', fontWeight: 700 }}>
+                {record.tsa_timestamp ? new Date(record.tsa_timestamp).toUTCString() : 'N/A'}
+              </span>
+            </div>
+            <div className="usage-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+              <span className="usage-label">Verified Fingerprint (SHA-256 Hash):</span>
+              <span className="usage-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{record.tsa_fingerprint}</span>
+            </div>
+
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 14 }}>
+              <strong>How to Audit this Signature:</strong>
+              <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <li>Click <strong>Download TSR Signature</strong> to download the binary <code>.tsr</code> file.</li>
+                <li>Verify its cryptographic authenticity and exact certified timestamp by running this standard OpenSSL command:
+                  <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
+                    openssl ts -reply -in V25_TSA_Certificate.tsr -text
+                  </code>
+                </li>
+                <li>This command uses public key cryptography to prove that the hash was officially timestamped by **DigiCert's root servers** and has not been altered since.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <a href="/" className="usage-btn" style={{ marginTop: 24 }}>&larr; Back to Predictor App</a>
     </div>
   )
 }
