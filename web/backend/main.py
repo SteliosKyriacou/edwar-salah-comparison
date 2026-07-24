@@ -769,6 +769,21 @@ def run_backup(request: Request):
         raise HTTPException(500, f"Failed to execute backup script: {e}")
 
 
+@app.get("/api/verify/count")
+def get_verify_count():
+    if not os.path.exists(DB_FILE):
+        return {"total_timestamps": 0}
+    conn = _get_db_conn()
+    try:
+        cursor = conn.execute("SELECT COUNT(*) FROM api_key_stats")
+        row = cursor.fetchone()
+        return {"total_timestamps": row[0] if row else 0}
+    except Exception as e:
+        raise HTTPException(500, f"Error counting timestamps: {e}")
+    finally:
+        conn.close()
+
+
 @app.get("/api/verify")
 def verify_prediction(hash: str):
     target_hash = hash.strip()

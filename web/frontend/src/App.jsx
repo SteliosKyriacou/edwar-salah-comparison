@@ -1003,6 +1003,23 @@ function VerifyPage() {
   const [record, setRecord] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [totalTimestamps, setTotalTimestamps] = useState(0)
+
+  // Fetch total timestamp count on mount
+  useEffect(() => {
+    async function fetchCount() {
+      try {
+        const res = await fetch('/api/verify/count')
+        if (res.ok) {
+          const data = await res.json()
+          setTotalTimestamps(data.total_timestamps)
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    fetchCount()
+  }, [])
 
   async function handleVerify(e) {
     if (e) e.preventDefault()
@@ -1043,8 +1060,13 @@ function VerifyPage() {
   }, [])
 
   return (
-    <div className="usage-container" style={{ maxWidth: '800px' }}>
+    <div className="usage-container" style={{ maxWidth: '800px', textAlign: 'center' }}>
       <h2 className="usage-title">🛡️ V25 Prediction Verification Portal</h2>
+      
+      <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.08)', border: '1px solid rgba(46, 204, 113, 0.2)', borderRadius: 12, padding: '10px 18px', display: 'inline-block', fontSize: '0.85rem', fontWeight: 700, marginBottom: 20 }}>
+        🔒 Total Registered Cryptographic Timestamps: {totalTimestamps}
+      </div>
+
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 24 }}>
         Input any V25 SHA-256 evaluation fingerprint to retrieve its certified immutable details and DigiCert Trusted TSR Certificate.
       </p>
