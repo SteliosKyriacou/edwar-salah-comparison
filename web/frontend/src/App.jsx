@@ -126,6 +126,33 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }} className="print-hide">
               <h2 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-primary)' }}>📊 Clinical Attrition Assessment Results</h2>
               <div style={{ display: 'flex', gap: 10 }}>
+                {result.tsa_manifest && (
+                  <button 
+                    onClick={() => {
+                      const blob = new Blob([result.tsa_manifest], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `V25_Prediction_Manifest_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
+                      a.click();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 20px',
+                      background: 'rgba(74, 158, 255, 0.15)',
+                      color: 'var(--accent-blue)',
+                      border: '1px solid rgba(74, 158, 255, 0.3)',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    📄 Download Manifest
+                  </button>
+                )}
                 {result.tsa_signature_b64 && (
                   <button 
                     onClick={() => {
@@ -262,34 +289,59 @@ export default function App() {
                     RFC 3161 Trusted Time-Stamp Authority (TSA) Signed Token
                   </div>
                 </div>
-                {result.tsa_signature_b64 && (
-                  <button
-                    onClick={() => {
-                      const bin = atob(result.tsa_signature_b64);
-                      const arr = new Uint8Array(bin.length);
-                      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-                      const blob = new Blob([arr], { type: 'application/timestamp-reply' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `V25_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
-                      a.click();
-                    }}
-                    className="print-hide"
-                    style={{
-                      background: 'rgba(46, 204, 113, 0.15)',
-                      color: 'var(--accent-green)',
-                      border: '1px solid rgba(46, 204, 113, 0.3)',
-                      borderRadius: 6,
-                      padding: '6px 12px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    📥 Download TSR Signature
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 10 }} className="print-hide">
+                  {result.tsa_manifest && (
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([result.tsa_manifest], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `V25_Prediction_Manifest_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
+                        a.click();
+                      }}
+                      style={{
+                        background: 'rgba(74, 158, 255, 0.15)',
+                        color: 'var(--accent-blue)',
+                        border: '1px solid rgba(74, 158, 255, 0.3)',
+                        borderRadius: 6,
+                        padding: '6px 12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📄 Download Manifest
+                    </button>
+                  )}
+                  {result.tsa_signature_b64 && (
+                    <button
+                      onClick={() => {
+                        const bin = atob(result.tsa_signature_b64);
+                        const arr = new Uint8Array(bin.length);
+                        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                        const blob = new Blob([arr], { type: 'application/timestamp-reply' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `V25_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                        a.click();
+                      }}
+                      style={{
+                        background: 'rgba(46, 204, 113, 0.15)',
+                        color: 'var(--accent-green)',
+                        border: '1px solid rgba(46, 204, 113, 0.3)',
+                        borderRadius: 6,
+                        padding: '6px 12px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📥 Download TSR Signature
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="usage-item" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '8px 0', display: 'flex', justifyContent: 'space-between' }}>
@@ -1067,33 +1119,59 @@ function VerifyPage() {
                 <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--accent-green)' }}>🛡️ DigiCert Time-Stamp Certificate</h3>
                 <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 4 }}>RFC 3161 Globally Trusted Digital Signature</div>
               </div>
-              {record.tsa_signature_b64 && (
-                <button
-                  onClick={() => {
-                    const bin = atob(record.tsa_signature_b64);
-                    const arr = new Uint8Array(bin.length);
-                    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-                    const blob = new Blob([arr], { type: 'application/timestamp-reply' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `V25_TSA_Certificate_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
-                    a.click();
-                  }}
-                  style={{
-                    background: 'rgba(46, 204, 113, 0.15)',
-                    color: 'var(--accent-green)',
-                    border: '1px solid rgba(46, 204, 113, 0.3)',
-                    borderRadius: 6,
-                    padding: '8px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  📥 Download TSR Signature
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: 10 }}>
+                {record.tsa_manifest && (
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([record.tsa_manifest], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `V25_Prediction_Manifest_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
+                      a.click();
+                    }}
+                    style={{
+                      background: 'rgba(74, 158, 255, 0.15)',
+                      color: 'var(--accent-blue)',
+                      border: '1px solid rgba(74, 158, 255, 0.3)',
+                      borderRadius: 6,
+                      padding: '8px 14px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📄 Download Manifest
+                  </button>
+                )}
+                {record.tsa_signature_b64 && (
+                  <button
+                    onClick={() => {
+                      const bin = atob(record.tsa_signature_b64);
+                      const arr = new Uint8Array(bin.length);
+                      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                      const blob = new Blob([arr], { type: 'application/timestamp-reply' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `V25_TSA_Certificate_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                      a.click();
+                    }}
+                    style={{
+                      background: 'rgba(46, 204, 113, 0.15)',
+                      color: 'var(--accent-green)',
+                      border: '1px solid rgba(46, 204, 113, 0.3)',
+                      borderRadius: 6,
+                      padding: '8px 14px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📥 Download TSR Signature
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="usage-item">
@@ -1110,13 +1188,14 @@ function VerifyPage() {
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 14 }}>
               <strong>How to Audit this Signature:</strong>
               <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <li>Click <strong>Download TSR Signature</strong> to download the binary <code>.tsr</code> file.</li>
-                <li>Verify its cryptographic authenticity and exact certified timestamp by running this standard OpenSSL command:
+                <li>Click <strong>Download Manifest</strong> to download the plain-text <code>V25_Prediction_Manifest.txt</code> file.</li>
+                <li>Click <strong>Download TSR Signature</strong> to download the binary <code>V25_TSA_Certificate.tsr</code> signature token.</li>
+                <li>Audit both files together to prove mathematical authenticity using OpenSSL:
                   <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
-                    openssl ts -reply -in V25_TSA_Certificate.tsr -text
+                    openssl ts -verify -data V25_Prediction_Manifest.txt -in V25_TSA_Certificate.tsr -token_in
                   </code>
                 </li>
-                <li>This command uses public key cryptography to prove that the hash was officially timestamped by **DigiCert's root servers** and has not been altered since.</li>
+                <li>A successful output prints <code>Verification: OK</code>, certifying that this exact prediction manifest was officially signed by DigiCert on this specific date.</li>
               </ol>
             </div>
           </div>

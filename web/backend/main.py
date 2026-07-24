@@ -307,19 +307,22 @@ def _get_rfc3161_timestamp(data_to_hash: bytes) -> str:
     return ""
 
 
-def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = ""):
+def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, owner: str = "", tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = "", tsa_manifest: str = "", prediction_json: dict = None):
     """Log prediction details for API Key statistics."""
     from datetime import datetime
     os.makedirs(STATS_LOG_DIR, exist_ok=True)
     entry = {
         "timestamp": datetime.utcnow().isoformat(),
         "api_key": api_key,
+        "owner": owner,
         "smiles": smiles.strip(),
         "target": target.strip(),
         "indication": indication.strip(),
         "tsa_fingerprint": tsa_fingerprint,
         "tsa_timestamp": tsa_timestamp,
-        "tsa_signature_b64": tsa_signature_b64
+        "tsa_signature_b64": tsa_signature_b64,
+        "tsa_manifest": tsa_manifest,
+        "prediction_json": prediction_json
     }
     with open(STATS_LOG_FILE, "a") as f:
         f.write(json.dumps(entry) + "\n")
@@ -656,7 +659,9 @@ def verify_prediction(hash: str):
                             "indication": entry.get("indication"),
                             "tsa_fingerprint": entry.get("tsa_fingerprint"),
                             "tsa_timestamp": entry.get("tsa_timestamp"),
-                            "tsa_signature_b64": entry.get("tsa_signature_b64")
+                            "tsa_signature_b64": entry.get("tsa_signature_b64"),
+                            "tsa_manifest": entry.get("tsa_manifest") or "",
+                            "prediction_json": entry.get("prediction_json") or None
                         }
                 except Exception:
                     pass
@@ -740,22 +745,32 @@ async def analyze(req: AnalyzeRequest, request: Request):
             _queued_count -= 1
             _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
 
-    # Build secure fingerprint string
+    # Build secure plain-text manifest file content
     score = result.get("overview", {}).get("medchem_score", 0)
     ts_str = datetime.utcnow().isoformat()
 
-    fingerprint_src = f"SMILES:{req.smiles.strip()}|Target:{req.target.strip()}|Indication:{req.indication.strip()}|Score:{score}|Timestamp:{ts_str}|Owner:{key_info['owner']}"
+    tsa_manifest = (
+        f"V25 Clinical Attrition Prediction Manifest\n"
+        f"==========================================\n"
+        f"Authorized Owner: {key_info['owner']}\n"
+        f"SMILES: {req.smiles.strip()}\n"
+        f"Target Class: {req.target.strip()}\n"
+        f"Therapeutic Indication: {req.indication.strip()}\n"
+        f"MedChem Score V25: {score}\n"
+        f"Certified Timestamp: {ts_str}\n"
+    )
 
     import hashlib
-    tsa_fingerprint = hashlib.sha256(fingerprint_src.encode("utf-8")).hexdigest()
+    tsa_fingerprint = hashlib.sha256(tsa_manifest.encode("utf-8")).hexdigest()
 
-    # Make the actual DigiCert trusted timestamp request
-    tsa_signature_b64 = _get_rfc3161_timestamp(fingerprint_src.encode("utf-8"))
+    # Make the actual DigiCert trusted timestamp request on the plain-text manifest
+    tsa_signature_b64 = _get_rfc3161_timestamp(tsa_manifest.encode("utf-8"))
 
     # Append TSA verification fields to result response
     result["tsa_fingerprint"] = tsa_fingerprint
     result["tsa_timestamp"] = ts_str
     result["tsa_signature_b64"] = tsa_signature_b64
+    result["tsa_manifest"] = tsa_manifest
 
     # Record successful usage
     _record_key_usage(key_info["key"], key_info["rate_limit"])
@@ -764,9 +779,12 @@ async def analyze(req: AnalyzeRequest, request: Request):
         req.smiles,
         req.target,
         req.indication,
+        owner=key_info["owner"],
         tsa_fingerprint=tsa_fingerprint,
         tsa_timestamp=ts_str,
-        tsa_signature_b64=tsa_signature_b64
+        tsa_signature_b64=tsa_signature_b64,
+        tsa_manifest=tsa_manifest,
+        prediction_json=result
     )
 
     ua = request.headers.get("user-agent", "")
