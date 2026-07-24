@@ -261,6 +261,86 @@ def startup_event():
     _prime_rate_limiter_cache()
 
 
+def _build_complete_manifest(owner: str, smiles: str, target: str, indication: str, timestamp: str, result: dict) -> str:
+    ov = result.get("overview", {})
+    bio = result.get("biology", {})
+    tox = result.get("toxicology", {})
+    ph = result.get("pharmacology", {})
+    mc = result.get("medchem", {})
+
+    # Helper to format percentage values safely
+    def _pct(val):
+        if val is None:
+            return "N/A"
+        try:
+            return f"{float(val) * 100:.2f}%" if float(val) <= 1.0 else f"{float(val):.2f}%"
+        except Exception:
+            return str(val)
+
+    manifest_lines = [
+        "V25 Clinical Attrition Prediction Manifest",
+        "==========================================",
+        f"Authorized Owner: {owner}",
+        f"SMILES: {smiles.strip()}",
+        f"Target Class: {target.strip()}",
+        f"Therapeutic Indication: {indication.strip()}",
+        f"Certified Timestamp: {timestamp}",
+        "",
+        "Consensus Overview",
+        "------------------",
+        f"MedChem Score V25: {ov.get('medchem_score', 'N/A')}",
+        f"TCSP (Total Clinical Success Probability): {_pct(ov.get('tcsp'))}",
+        f"Phase 1 Transition Probability: {_pct(ov.get('final_p1'))}",
+        f"Phase 2 Transition Probability: {_pct(ov.get('final_p2'))}",
+        f"Phase 3 Transition Probability: {_pct(ov.get('final_p3'))}",
+        f"Consensus Rationale:\n{ov.get('rationale', 'N/A')}",
+        "",
+        "Biological-Rationalist Assessment",
+        "---------------------------------",
+        f"Verdict: {bio.get('verdict', 'N/A')}",
+        f"Mechanism Validation: {bio.get('mechanism_validation', 'N/A')}",
+        f"Druggability Assessment: {bio.get('druggability', 'N/A')}",
+        f"Phase 1 Probability: {_pct(bio.get('bio_p1'))}",
+        f"Phase 2 Probability: {_pct(bio.get('bio_p2'))}",
+        f"Phase 3 Probability: {_pct(bio.get('bio_p3'))}",
+        f"Rationale:\n{bio.get('rationale', 'N/A')}",
+        "",
+        "Toxi-Predictive-Toxicologist Assessment",
+        "---------------------------------------",
+        f"Verdict: {tox.get('verdict', 'N/A')}",
+        f"Therapeutic Window: {tox.get('therapeutic_window', 'N/A')}",
+        f"Primary Concern: {tox.get('primary_concern', 'N/A')}",
+        f"On-Target Risk: {tox.get('on_target_risk', 'N/A')}",
+        f"Off-Target Risk: {tox.get('off_target_risk', 'N/A')}",
+        f"Phase 1 Probability: {_pct(tox.get('tox_p1'))}",
+        f"Phase 2 Probability: {_pct(tox.get('tox_p2'))}",
+        f"Phase 3 Probability: {_pct(tox.get('tox_p3'))}",
+        f"Rationale:\n{tox.get('rationale', 'N/A')}",
+        "",
+        "Pharma-Clinical-Pharmacologist Assessment",
+        "-----------------------------------------",
+        f"Verdict: {ph.get('verdict', 'N/A')}",
+        f"Predicted Dose: {ph.get('predicted_dose', 'N/A')}",
+        f"Oral Feasibility: {ph.get('oral_feasibility', 'N/A')}",
+        f"DDI Risk: {ph.get('ddi_risk', 'N/A')}",
+        f"Half-Life: {ph.get('half_life', 'N/A')}",
+        f"Phase 1 Probability: {_pct(ph.get('pk_p1'))}",
+        f"Phase 2 Probability: {_pct(ph.get('pk_p2'))}",
+        f"Phase 3 Probability: {_pct(ph.get('pk_p3'))}",
+        f"Rationale:\n{ph.get('rationale', 'N/A')}",
+        "",
+        "MedChem-Rationalist Assessment (Pass 1)",
+        "---------------------------------------",
+        f"Metabolic Stability: {ov.get('metabolic_stability', 'N/A')}",
+        f"Toxic Fragments: {ov.get('toxic_fragments', 'N/A')}",
+        f"Phase 1 Probability: {_pct(mc.get('chem_p1'))}",
+        f"Phase 2 Probability: {_pct(mc.get('chem_p2'))}",
+        f"Phase 3 Probability: {_pct(mc.get('chem_p3'))}",
+        f"Structural Assessment:\n{ov.get('structural_assessment', 'N/A')}"
+    ]
+    return "\n".join(manifest_lines) + "\n"
+
+
 def _get_rfc3161_timestamp(data_to_hash: bytes) -> str:
     """Make a live RFC 3161 request to DigiCert's public TSA server.
 
@@ -745,19 +825,15 @@ async def analyze(req: AnalyzeRequest, request: Request):
             _queued_count -= 1
             _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
 
-    # Build secure plain-text manifest file content
-    score = result.get("overview", {}).get("medchem_score", 0)
+    # Build secure plain-text manifest file content (fully detailed, including all verdicts/rationales!)
     ts_str = datetime.utcnow().isoformat()
-
-    tsa_manifest = (
-        f"V25 Clinical Attrition Prediction Manifest\n"
-        f"==========================================\n"
-        f"Authorized Owner: {key_info['owner']}\n"
-        f"SMILES: {req.smiles.strip()}\n"
-        f"Target Class: {req.target.strip()}\n"
-        f"Therapeutic Indication: {req.indication.strip()}\n"
-        f"MedChem Score V25: {score}\n"
-        f"Certified Timestamp: {ts_str}\n"
+    tsa_manifest = _build_complete_manifest(
+        key_info["owner"],
+        req.smiles,
+        req.target,
+        req.indication,
+        ts_str,
+        result
     )
 
     import hashlib
