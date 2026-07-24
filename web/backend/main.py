@@ -226,34 +226,72 @@ def health():
     return {"status": "ok"}
 
 
-STATS_LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
-STATS_LOG_FILE = os.path.join(STATS_LOG_DIR, "api_key_stats.jsonl")
+import sqlite3
+
+DB_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
+DB_FILE = os.path.join(DB_DIR, "v25_database.db")
+
+
+def _get_db_conn():
+    """Get a thread-safe connection to the SQLite database with WAL mode enabled."""
+    os.makedirs(DB_DIR, exist_ok=True)
+    conn = sqlite3.connect(DB_FILE, timeout=30.0)
+    # Enable WAL mode for excellent concurrent read/write performance
+    conn.execute("PRAGMA journal_mode=WAL;")
+    return conn
+
+
+def _init_db():
+    """Initialize the SQLite database and create tables/indexes if not exist."""
+    conn = _get_db_conn()
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS api_key_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                api_key TEXT NOT NULL,
+                owner TEXT,
+                smiles TEXT,
+                target TEXT,
+                indication TEXT,
+                tsa_fingerprint TEXT,
+                tsa_timestamp TEXT,
+                tsa_signature_b64 TEXT,
+                tsa_manifest TEXT,
+                prediction_json TEXT
+            );
+        """)
+        # Create an index on the fingerprint for O(1) verification lookups
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_tsa_fingerprint ON api_key_stats(tsa_fingerprint);")
+        # Create an index on api_key for fast stats queries
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_api_key ON api_key_stats(api_key);")
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _prime_rate_limiter_cache():
-    """Prime the in-memory rate limiter cache from the on-disk statistics log."""
-    if not os.path.exists(STATS_LOG_FILE):
+    """Prime the in-memory rate limiter cache from the SQLite log database."""
+    _init_db()  # Make sure DB and tables are initialized first
+    if not os.path.exists(DB_FILE):
         return
-    try:
-        with open(STATS_LOG_FILE, "r") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                try:
-                    entry = json.loads(line)
-                    api_key = entry.get("api_key")
-                    ts_str = entry.get("timestamp")
-                    if api_key and ts_str:
-                        dt = datetime.fromisoformat(ts_str)
-                        epoch = dt.timestamp()
 
-                        if api_key not in _key_usage_timestamps:
-                            _key_usage_timestamps[api_key] = []
-                        _key_usage_timestamps[api_key].append(epoch)
-                except Exception:
-                    pass
+    conn = _get_db_conn()
+    try:
+        cursor = conn.execute("SELECT api_key, timestamp FROM api_key_stats ORDER BY id ASC")
+        for api_key, ts_str in cursor:
+            try:
+                dt = datetime.fromisoformat(ts_str)
+                epoch = dt.timestamp()
+                if api_key not in _key_usage_timestamps:
+                    _key_usage_timestamps[api_key] = []
+                _key_usage_timestamps[api_key].append(epoch)
+            except Exception:
+                pass
     except Exception:
         pass
+    finally:
+        conn.close()
 
 
 @app.on_event("startup")
@@ -388,28 +426,41 @@ def _get_rfc3161_timestamp(data_to_hash: bytes) -> str:
 
 
 def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, owner: str = "", tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = "", tsa_manifest: str = "", prediction_json: dict = None):
-    """Log prediction details for API Key statistics."""
+    """Log prediction details into the SQLite database."""
     from datetime import datetime
-    os.makedirs(STATS_LOG_DIR, exist_ok=True)
-    entry = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "api_key": api_key,
-        "owner": owner,
-        "smiles": smiles.strip(),
-        "target": target.strip(),
-        "indication": indication.strip(),
-        "tsa_fingerprint": tsa_fingerprint,
-        "tsa_timestamp": tsa_timestamp,
-        "tsa_signature_b64": tsa_signature_b64,
-        "tsa_manifest": tsa_manifest,
-        "prediction_json": prediction_json
-    }
-    with open(STATS_LOG_FILE, "a") as f:
-        f.write(json.dumps(entry) + "\n")
+    conn = _get_db_conn()
+    try:
+        pred_str = json.dumps(prediction_json) if prediction_json else None
+        conn.execute(
+            """
+            INSERT INTO api_key_stats (
+                timestamp, api_key, owner, smiles, target, indication, 
+                tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.utcnow().isoformat(),
+                api_key,
+                owner,
+                smiles.strip(),
+                target.strip(),
+                indication.strip(),
+                tsa_fingerprint,
+                tsa_timestamp,
+                tsa_signature_b64,
+                tsa_manifest,
+                pred_str
+            )
+        )
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
 
 
 def _get_api_key_stats(api_key: str) -> dict:
-    """Read stats log file and compute metrics for a specific API Key."""
+    """Compute statistics and breakdowns for a specific API Key from the SQLite database."""
     total_predictions = 0
     unique_smiles = set()
     unique_targets = set()
@@ -417,34 +468,39 @@ def _get_api_key_stats(api_key: str) -> dict:
     by_indication = {}
     by_target = {}
 
-    if os.path.exists(STATS_LOG_FILE):
-        try:
-            with open(STATS_LOG_FILE, "r") as f:
-                for line in f:
-                    if not line.strip():
-                        continue
-                    try:
-                        entry = json.loads(line)
-                        if entry.get("api_key") == api_key:
-                            total_predictions += 1
+    if not os.path.exists(DB_FILE):
+        return {
+            "total_predictions": 0,
+            "unique_molecules": 0,
+            "unique_targets": 0,
+            "unique_indications": 0,
+            "predictions_per_indication": {},
+            "predictions_per_target": {}
+        }
 
-                            smiles = entry.get("smiles", "").strip()
-                            if smiles:
-                                unique_smiles.add(smiles)
+    conn = _get_db_conn()
+    try:
+        cursor = conn.execute("SELECT smiles, target, indication FROM api_key_stats WHERE api_key = ?", (api_key,))
+        for smiles_val, target_val, indication_val in cursor:
+            total_predictions += 1
 
-                            target = entry.get("target", "").strip()
-                            if target:
-                                unique_targets.add(target)
-                                by_target[target] = by_target.get(target, 0) + 1
+            smiles = (smiles_val or "").strip()
+            if smiles:
+                unique_smiles.add(smiles)
 
-                            indication = entry.get("indication", "").strip()
-                            if indication:
-                                unique_indications.add(indication)
-                                by_indication[indication] = by_indication.get(indication, 0) + 1
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+            target = (target_val or "").strip()
+            if target:
+                unique_targets.add(target)
+                by_target[target] = by_target.get(target, 0) + 1
+
+            indication = (indication_val or "").strip()
+            if indication:
+                unique_indications.add(indication)
+                by_indication[indication] = by_indication.get(indication, 0) + 1
+    except Exception:
+        pass
+    finally:
+        conn.close()
 
     return {
         "total_predictions": total_predictions,
@@ -719,34 +775,40 @@ def verify_prediction(hash: str):
     if not target_hash:
         raise HTTPException(400, "Hash parameter is required")
 
-    if not os.path.exists(STATS_LOG_FILE):
+    if not os.path.exists(DB_FILE):
         raise HTTPException(404, "No evaluations recorded on this server.")
 
+    conn = _get_db_conn()
     try:
-        with open(STATS_LOG_FILE, "r") as f:
-            for line in f:
-                if not line.strip():
-                    continue
+        cursor = conn.execute("SELECT * FROM api_key_stats WHERE tsa_fingerprint = ?", (target_hash,))
+        row = cursor.fetchone()
+        if row:
+            # Table columns:
+            # id, timestamp, api_key, owner, smiles, target, indication, 
+            # tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json
+            pred_json = None
+            if row[11]:
                 try:
-                    entry = json.loads(line)
-                    if entry.get("tsa_fingerprint") == target_hash:
-                        return {
-                            "found": True,
-                            "owner": entry.get("owner") or "Registered User",
-                            "timestamp": entry.get("timestamp"),
-                            "smiles": entry.get("smiles"),
-                            "target": entry.get("target"),
-                            "indication": entry.get("indication"),
-                            "tsa_fingerprint": entry.get("tsa_fingerprint"),
-                            "tsa_timestamp": entry.get("tsa_timestamp"),
-                            "tsa_signature_b64": entry.get("tsa_signature_b64"),
-                            "tsa_manifest": entry.get("tsa_manifest") or "",
-                            "prediction_json": entry.get("prediction_json") or None
-                        }
+                    pred_json = json.loads(row[11])
                 except Exception:
                     pass
+            return {
+                "found": True,
+                "owner": row[3] or "Registered User",
+                "timestamp": row[1],
+                "smiles": row[4],
+                "target": row[5],
+                "indication": row[6],
+                "tsa_fingerprint": row[7],
+                "tsa_timestamp": row[8],
+                "tsa_signature_b64": row[9],
+                "tsa_manifest": row[10] or "",
+                "prediction_json": pred_json
+            }
     except Exception as e:
         raise HTTPException(500, f"Error searching database: {e}")
+    finally:
+        conn.close()
 
     raise HTTPException(404, "Evaluation not found. Please verify the SHA-256 fingerprint.")
 
