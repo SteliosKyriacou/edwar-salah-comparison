@@ -860,3 +860,75 @@ body {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Print Media Styles */
+@media print {
+  /* Hide unnecessary elements on paper/PDF */
+  .api-key-config,
+  .input-form,
+  .header,
+  .disclaimer,
+  .contact-footer,
+  .calibration-section,
+  .print-hide,
+  button,
+  a {
+    display: none !important;
+  }
+
+  /* Force light-background for perfect ink/PDF printing */
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Style results elegantly for print */
+  .score-row, .phase-row, .agents-grid {
+    display: block !important;
+    gap: 0 !important;
+  }
+
+  .score-card, .phase-card, .agent-card, .structural-flags, .web-search-summary, .fda-response {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #000 !important;
+    margin-bottom: 16px !important;
+    page-break-inside: avoid !important;
+    box-shadow: none !important;
+  }
+
+  .score-card .value, .phase-card .prob-value, .agent-prob-item, .verdict-badge {
+    color: #000 !important;
+  }
+
+  .agent-body {
+    display: block !important;
+    border-top: 1px solid #e2e8f0 !important;
+    padding: 12px 0 0 !important;
+  }
+
+  .agent-header {
+    cursor: default !important;
+  }
+
+  .chevron {
+    display: none !important;
+  }
+
+  /* Add page breaks cleanly */
+  .agent-card {
+    page-break-inside: avoid !important;
+  }
+
+  h2, h3 {
+    page-break-after: avoid !important;
+    color: #000 !important;
+  }
+}

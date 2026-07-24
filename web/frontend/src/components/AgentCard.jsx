@@ -9,12 +9,13 @@ function probColor(p) {
 
 export default function AgentCard({
   name, icon, iconBg, data, probKeys, probRationaleKeys,
-  sections = [], details = [], isMedchem = false,
+  sections = [], details = [], isMedchem = false, isPrinting = false,
 }) {
   const [open, setOpen] = useState(false)
 
   const verdict = data.verdict || ''
   const probLabels = ['P1', 'P2', 'P3']
+  const isBodyOpen = open || isPrinting
 
   return (
     <div className="agent-card">
@@ -37,11 +38,11 @@ export default function AgentCard({
           {verdict && (
             <span className={`verdict-badge verdict-${verdict}`}>{verdict}</span>
           )}
-          <span className={`chevron ${open ? 'open' : ''}`}>&#9660;</span>
+          <span className={`chevron ${isBodyOpen ? 'open' : ''}`}>&#9660;</span>
         </div>
       </div>
 
-      {open && (
+      {isBodyOpen && (
         <div className="agent-body">
           <div className="agent-probs">
             {probRationaleKeys.map((key, i) => {

@@ -14,8 +14,17 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [isQueued, setIsQueued] = useState(false)
+  const [isPrinting, setIsPrinting] = useState(false)
   const [error, setError] = useState(null)
   const resultsRef = useRef(null)
+
+  function handlePrint() {
+    setIsPrinting(true)
+    setTimeout(() => {
+      window.print()
+      setIsPrinting(false)
+    }, 200)
+  }
 
   // Polling for queue state while loading
   useEffect(() => {
@@ -111,6 +120,29 @@ export default function App() {
 
         {result && (
           <div ref={resultsRef}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }} className="print-hide">
+              <h2 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-primary)' }}>📊 Clinical Attrition Assessment Results</h2>
+              <button 
+                onClick={handlePrint}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 20px',
+                  background: 'var(--accent-blue)',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  boxShadow: '0 4px 12px rgba(74, 158, 255, 0.25)'
+                }}
+              >
+                📄 Save as PDF
+              </button>
+            </div>
+
             <ScoreCards overview={result.overview} />
             <PhaseCards overview={result.overview} />
 
@@ -133,6 +165,7 @@ export default function App() {
                   { title: 'Mechanism Validation', key: 'mechanism_validation' },
                   { title: 'Druggability Assessment', key: 'druggability' },
                 ]}
+                isPrinting={isPrinting}
               />
               <AgentCard
                 name="Toxi-Predictive-Toxicologist"
@@ -150,6 +183,7 @@ export default function App() {
                   { label: 'On-Target Risk', key: 'on_target_risk' },
                   { label: 'Off-Target Risk', key: 'off_target_risk' },
                 ]}
+                isPrinting={isPrinting}
               />
               <AgentCard
                 name="Pharma-Clinical-Pharmacologist"
@@ -167,6 +201,7 @@ export default function App() {
                   { label: 'DDI Risk', key: 'ddi_risk' },
                   { label: 'Half-Life', key: 'half_life' },
                 ]}
+                isPrinting={isPrinting}
               />
               <AgentCard
                 name="MedChem-Rationalist"
@@ -177,6 +212,7 @@ export default function App() {
                 probRationaleKeys={[]}
                 sections={[]}
                 isMedchem
+                isPrinting={isPrinting}
               />
             </div>
           </div>
