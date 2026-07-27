@@ -857,50 +857,56 @@ async def analyze(req: AnalyzeRequest, request: Request):
     api_key = key_info["key"]
     _queued_count += 1
     _key_queued_counts[api_key] = _key_queued_counts.get(api_key, 0) + 1
+    
     queued_decremented = False
+    evaluating_incremented = False
     try:
         async with _concurrency_semaphore:
+            # We are inside the semaphore, so we transition from queued to evaluating
             _queued_count -= 1
             _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
             queued_decremented = True
+            
             _evaluating_count += 1
             _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 1
-            try:
-                if req.mock:
-                    # Simulate a 5-second analysis
-                    await asyncio.sleep(5)
-                    result = {
-                        "overview": {
-                            "medchem_score": 42,
-                            "tcsp": 0.15,
-                            "final_p1": 0.6, "final_p2": 0.5, "final_p3": 0.5,
-                            "rationale": "Mock analysis for testing.",
-                            "metabolic_stability": "Medium",
-                            "toxic_fragments": "None",
-                            "structural_assessment": "Clean"
-                        },
-                        "biology": {"verdict": "ELITE", "rationale": "Mock bio rationale"},
-                        "toxicology": {"verdict": "CLEAN", "rationale": "Mock tox rationale"},
-                        "pharmacology": {"verdict": "FAVORABLE", "rationale": "Mock pk rationale"},
-                        "medchem": {"chem_p1": 0.6, "chem_p2": 0.5, "chem_p3": 0.5}
-                    }
-                else:
-                    # Run the CPU/network-bound pipeline in a threadpool
-                    result = await asyncio.to_thread(
-                        run_pipeline,
-                        req.smiles.strip(),
-                        req.target.strip(),
-                        req.indication.strip(),
-                        req.auxiliary.strip(),
-                        web_search=req.web_search,
-                    )
-            finally:
-                _evaluating_count -= 1
-                _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 1)
+            evaluating_incremented = True
+            
+            if req.mock:
+                # Simulate a 5-second analysis
+                await asyncio.sleep(5)
+                result = {
+                    "overview": {
+                        "medchem_score": 42,
+                        "tcsp": 0.15,
+                        "final_p1": 0.6, "final_p2": 0.5, "final_p3": 0.5,
+                        "rationale": "Mock analysis for testing.",
+                        "metabolic_stability": "Medium",
+                        "toxic_fragments": "None",
+                        "structural_assessment": "Clean"
+                    },
+                    "biology": {"verdict": "ELITE", "rationale": "Mock bio rationale"},
+                    "toxicology": {"verdict": "CLEAN", "rationale": "Mock tox rationale"},
+                    "pharmacology": {"verdict": "FAVORABLE", "rationale": "Mock pk rationale"},
+                    "medchem": {"chem_p1": 0.6, "chem_p2": 0.5, "chem_p3": 0.5}
+                }
+            else:
+                # Run the CPU/network-bound pipeline in a threadpool
+                result = await asyncio.to_thread(
+                    run_pipeline,
+                    req.smiles.strip(),
+                    req.target.strip(),
+                    req.indication.strip(),
+                    req.auxiliary.strip(),
+                    web_search=req.web_search,
+                )
     finally:
+        # Robust cleanup that handles ALL cancellations and edge cases
         if not queued_decremented:
             _queued_count -= 1
             _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
+        if evaluating_incremented:
+            _evaluating_count -= 1
+            _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 1)
 
     # Build secure plain-text manifest file content (fully detailed, including all verdicts/rationales!)
     ts_str = datetime.utcnow().isoformat()
