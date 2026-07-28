@@ -1,16 +1,16 @@
 #!/bin/bash
-# Backup script for V25 Database & Log files
+# Backup script for AlphaForge Database & Log files
 
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKUP_DIR="/home/stylianos_kyriacou/backups/v25-predictor"
+BACKUP_DIR="/home/stylianos_kyriacou/backups/alphaforge-predictor"
 GCS_BUCKET="gs://reneu001/timestamps-database-backup"
 
 echo "Initializing backup process..."
 mkdir -p "$BACKUP_DIR"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE_NAME="v25_backup_$TIMESTAMP.tar.gz"
+BACKUP_FILE_NAME="alphaforge_backup_$TIMESTAMP.tar.gz"
 BACKUP_FILE="$BACKUP_DIR/$BACKUP_FILE_NAME"
 
 # Compress logs, keys and configs
@@ -25,6 +25,6 @@ else
 fi
 
 # Keep only the last 30 daily backups to save disk space
-find "$BACKUP_DIR" -name "v25_backup_*.tar.gz" -mtime +30 -delete
+find "$BACKUP_DIR" -name "alphaforge_backup_*.tar.gz" -mtime +30 -delete
 
 echo "Backup successful! Saved locally to $BACKUP_FILE and mirrored to GCS."

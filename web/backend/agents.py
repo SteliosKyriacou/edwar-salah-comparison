@@ -1,4 +1,4 @@
-"""Agent logic — runs the 4-agent V25 pipeline."""
+"""Agent logic — runs the 4-agent AlphaForge pipeline."""
 
 import os
 import json
@@ -146,7 +146,7 @@ TASK: Integrate all advisories with your own Pass 1 assessment. Produce final co
 
 
 def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
-    """Run the full 4-agent V25 pipeline. Returns structured result dict.
+    """Run the full 4-agent AlphaForge pipeline. Returns structured result dict.
 
     If web_search is True, a grounded literature search is run first and its
     validated summary is appended to the auxiliary context fed to every agent.

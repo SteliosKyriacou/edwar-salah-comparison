@@ -229,7 +229,7 @@ def health():
 import sqlite3
 
 DB_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
-DB_FILE = os.path.join(DB_DIR, "v25_database.db")
+DB_FILE = os.path.join(DB_DIR, "alphaforge_database.db")
 
 
 def _get_db_conn():
@@ -316,7 +316,7 @@ def _build_complete_manifest(owner: str, smiles: str, target: str, indication: s
             return str(val)
 
     manifest_lines = [
-        "V25 Clinical Attrition Prediction Manifest",
+        "AlphaForge Clinical Attrition Prediction Manifest",
         "==========================================",
         f"Authorized Owner: {owner}",
         f"SMILES: {smiles.strip()}",
@@ -326,7 +326,7 @@ def _build_complete_manifest(owner: str, smiles: str, target: str, indication: s
         "",
         "Consensus Overview",
         "------------------",
-        f"MedChem Score V25: {ov.get('medchem_score', 'N/A')}",
+        f"MedChem Score AlphaForge: {ov.get('medchem_score', 'N/A')}",
         f"TCSP (Total Clinical Success Probability): {_pct(ov.get('tcsp'))}",
         f"Phase 1 Transition Probability: {_pct(ov.get('final_p1'))}",
         f"Phase 2 Transition Probability: {_pct(ov.get('final_p2'))}",
@@ -608,10 +608,10 @@ def add_or_edit_key(req: AdminKeyRequest, request: Request):
         # Generate a high-entropy hex secure key
         random_hex = secrets.token_hex(8)
         limit_suffix = "unlimited" if req.rate_limit < 0 else f"limit{req.rate_limit}"
-        target_key = f"v25_{req.owner.lower().replace(' ', '_')}_{limit_suffix}_{random_hex}"
+        target_key = f"alphaforge_{req.owner.lower().replace(' ', '_')}_{limit_suffix}_{random_hex}"
 
     # Check if target key is Stelios's key and we are trying to demote him (prevent self-lockout)
-    if target_key == "v25_stelios_unlimited_a28b6d39c04f5e71" and not req.admin:
+    if target_key == "alphaforge_stelios_unlimited_a28b6d39c04f5e71" and not req.admin:
         raise HTTPException(400, "Cannot remove admin privilege from the main administrator.")
 
     keys[target_key] = {
@@ -653,7 +653,7 @@ def delete_key(req: AdminDeleteKeyRequest, request: Request):
     if target_key not in keys:
         raise HTTPException(404, "Target API Key not found.")
 
-    if target_key == "v25_stelios_unlimited_a28b6d39c04f5e71":
+    if target_key == "alphaforge_stelios_unlimited_a28b6d39c04f5e71":
         raise HTTPException(400, "Cannot delete the main administrator key.")
 
     del keys[target_key]

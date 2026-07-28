@@ -10,7 +10,7 @@ import FdaResponse from './components/FdaResponse'
 import WebSearchSummary from './components/WebSearchSummary'
 
 export default function App() {
-  const [apiKey, setApiKey] = useState(localStorage.getItem('v25_api_key') || '')
+  const [apiKey, setApiKey] = useState(localStorage.getItem('alphaforge_api_key') || '')
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [isQueued, setIsQueued] = useState(false)
@@ -102,12 +102,12 @@ export default function App() {
           <input
             id="api-key-input"
             type="password"
-            placeholder="Enter your V25 API Key to enable predictions..."
+            placeholder="Enter your AlphaForge API Key to enable predictions..."
             value={apiKey}
             onChange={(e) => {
               const val = e.target.value
               setApiKey(val)
-              localStorage.setItem('v25_api_key', val)
+              localStorage.setItem('alphaforge_api_key', val)
             }}
           />
           <a href="/usage" style={{ marginLeft: 12, fontSize: '0.85rem', color: 'var(--accent-blue)', textDecoration: 'none', fontWeight: 600 }}>
@@ -133,7 +133,7 @@ export default function App() {
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `V25_Prediction_Manifest_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
+                      a.download = `AlphaForge_Prediction_Manifest_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
                       a.click();
                     }}
                     style={{
@@ -163,7 +163,7 @@ export default function App() {
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `V25_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                      a.download = `AlphaForge_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
                       a.click();
                     }}
                     style={{
@@ -297,7 +297,7 @@ export default function App() {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `V25_Prediction_Manifest_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
+                        a.download = `AlphaForge_Prediction_Manifest_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
                         a.click();
                       }}
                       style={{
@@ -324,7 +324,7 @@ export default function App() {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `V25_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                        a.download = `AlphaForge_TSA_Certificate_${result.tsa_timestamp ? result.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
                         a.click();
                       }}
                       style={{
@@ -360,10 +360,10 @@ export default function App() {
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16 }}>
                 <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital certificate signed by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify that this assessment is authentic, has not been modified, and was certified on this exact date:
                 <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <li>Visit the public V25 Verification Portal at: <strong style={{ color: 'var(--accent-blue)' }}>http://136.119.133.178:4003/verify</strong> and enter the SHA-256 fingerprint shown above. This will instantly query the immutable server logs to verify all assessment details.</li>
+                  <li>Visit the public AlphaForge Verification Portal at: <strong style={{ color: 'var(--accent-blue)' }}>http://136.119.133.178:4003/verify</strong> and enter the SHA-256 fingerprint shown above. This will instantly query the immutable server logs to verify all assessment details.</li>
                   <li>Alternatively, click <strong>Download Manifest</strong> and <strong>Download TSR Signature</strong>, and audit them together using this OpenSSL command:
                     <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
-                      openssl ts -verify -data V25_Prediction_Manifest.txt -in V25_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
+                      openssl ts -verify -data AlphaForge_Prediction_Manifest.txt -in AlphaForge_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
                     </code>
                   </li>
                   <li>This command uses public key cryptography to verify the DigiCert signature chain and mathematically prove that this exact fingerprint existed at this precise atomic time.</li>
@@ -395,7 +395,7 @@ export default function App() {
 }
 
 function UsagePage() {
-  const [apiKey, setApiKey] = useState(localStorage.getItem('v25_api_key') || '')
+  const [apiKey, setApiKey] = useState(localStorage.getItem('alphaforge_api_key') || '')
   const [info, setInfo] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -633,18 +633,18 @@ function UsagePage() {
 
   return (
     <div className="usage-container" style={{ maxWidth: info && info.admin ? '1000px' : '600px' }}>
-      <h2 className="usage-title">🔑 V25 API Key Usage</h2>
+      <h2 className="usage-title">🔑 AlphaForge API Key Usage</h2>
       
       <div className="form-group" style={{ marginBottom: 20 }}>
         <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>API Key</label>
         <div style={{ display: 'flex', gap: 10 }}>
           <input
             type="password"
-            placeholder="Enter your V25 API Key..."
+            placeholder="Enter your AlphaForge API Key..."
             value={apiKey}
             onChange={(e) => {
               setApiKey(e.target.value)
-              localStorage.setItem('v25_api_key', e.target.value)
+              localStorage.setItem('alphaforge_api_key', e.target.value)
             }}
             style={{
               flex: 1,
@@ -975,9 +975,9 @@ function UsagePage() {
                               Edit
                             </button>
                             <button
-                              disabled={k.key === 'v25_stelios_unlimited_a28b6d39c04f5e71'}
+                              disabled={k.key === 'alphaforge_stelios_unlimited_a28b6d39c04f5e71'}
                               onClick={() => handleDeleteKey(k.key)}
-                              style={{ background: 'none', border: 'none', color: k.key === 'v25_stelios_unlimited_a28b6d39c04f5e71' ? 'var(--text-muted)' : 'var(--accent-red)', cursor: k.key === 'v25_stelios_unlimited_a28b6d39c04f5e71' ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                              style={{ background: 'none', border: 'none', color: k.key === 'alphaforge_stelios_unlimited_a28b6d39c04f5e71' ? 'var(--text-muted)' : 'var(--accent-red)', cursor: k.key === 'alphaforge_stelios_unlimited_a28b6d39c04f5e71' ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
                             >
                               Delete
                             </button>
@@ -1061,14 +1061,14 @@ function VerifyPage() {
 
   return (
     <div className="usage-container" style={{ maxWidth: '800px', textAlign: 'center' }}>
-      <h2 className="usage-title">🛡️ V25 Prediction Verification Portal</h2>
+      <h2 className="usage-title">🛡️ AlphaForge Prediction Verification Portal</h2>
       
       <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.08)', border: '1px solid rgba(46, 204, 113, 0.2)', borderRadius: 12, padding: '10px 18px', display: 'inline-block', fontSize: '0.85rem', fontWeight: 700, marginBottom: 20 }}>
         🔒 Total Registered Cryptographic Timestamps: {totalTimestamps}
       </div>
 
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 24 }}>
-        Input any V25 SHA-256 evaluation fingerprint to retrieve its certified immutable details and DigiCert Trusted TSR Certificate.
+        Input any AlphaForge SHA-256 evaluation fingerprint to retrieve its certified immutable details and DigiCert Trusted TSR Certificate.
       </p>
 
       <form onSubmit={handleVerify} style={{ marginBottom: 24 }}>
@@ -1149,7 +1149,7 @@ function VerifyPage() {
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `V25_Prediction_Manifest_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
+                      a.download = `AlphaForge_Prediction_Manifest_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.txt`;
                       a.click();
                     }}
                     style={{
@@ -1176,7 +1176,7 @@ function VerifyPage() {
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `V25_TSA_Certificate_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
+                      a.download = `AlphaForge_TSA_Certificate_${record.tsa_timestamp ? record.tsa_timestamp.slice(0,10) : 'verification'}.tsr`;
                       a.click();
                     }}
                     style={{
@@ -1210,11 +1210,11 @@ function VerifyPage() {
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 14 }}>
               <strong>How to Audit this Signature:</strong>
               <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <li>Click <strong>Download Manifest</strong> to download the plain-text <code>V25_Prediction_Manifest.txt</code> file.</li>
-                <li>Click <strong>Download TSR Signature</strong> to download the binary <code>V25_TSA_Certificate.tsr</code> signature token.</li>
+                <li>Click <strong>Download Manifest</strong> to download the plain-text <code>AlphaForge_Prediction_Manifest.txt</code> file.</li>
+                <li>Click <strong>Download TSR Signature</strong> to download the binary <code>AlphaForge_TSA_Certificate.tsr</code> signature token.</li>
                 <li>Audit both files together to prove mathematical authenticity using OpenSSL:
                   <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
-                    openssl ts -verify -data V25_Prediction_Manifest.txt -in V25_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
+                    openssl ts -verify -data AlphaForge_Prediction_Manifest.txt -in AlphaForge_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
                   </code>
                 </li>
                 <li>A successful output prints <code>Verification: OK</code>, certifying that this exact prediction manifest was officially signed by DigiCert on this specific date.</li>
