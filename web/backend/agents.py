@@ -136,9 +136,9 @@ Predicted Dose: {pharma_data.get('predicted_dose_range', 'N/A')}
 Oral Feasibility: {pharma_data.get('oral_feasibility', 'N/A')}
 DDI Risk: {pharma_data.get('ddi_risk', 'N/A')}
 Half-life: {pharma_data.get('half_life_estimate', 'N/A')}
-pk_p1={pharma.get('pk_p1', 'N/A')} — {pharma.get('pk_p1_rationale', '')}
-pk_p2={pharma.get('pk_p2', 'N/A')} — {pharma.get('pk_p2_rationale', '')}
-pk_p3={pharma.get('pk_p3', 'N/A')} — {pharma.get('pk_p3_rationale', '')}
+pk_p1={pharma_data.get('pk_p1', 'N/A')} — {pharma_data.get('pk_p1_rationale', '')}
+pk_p2={pharma_data.get('pk_p2', 'N/A')} — {pharma_data.get('pk_p2_rationale', '')}
+pk_p3={pharma_data.get('pk_p3', 'N/A')} — {pharma_data.get('pk_p3_rationale', '')}
 
 TASK: Integrate all advisories with your own Pass 1 assessment. Produce final consensus probabilities (final_p1, final_p2, final_p3). Follow the integration principles. Output Pass 2 JSON only. Do NOT include medchem_score — it is computed server-side."""
     resp = llm.invoke([SystemMessage(content=MEDCHEM_PROMPT), HumanMessage(content=msg)])
