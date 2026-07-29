@@ -10,9 +10,6 @@ export default function Header() {
       <div className="subtitle-secondary">
         The score integrates analysis across key developability domains, including biology, toxicology, pharmacology, and medicinal chemistry.
       </div>
-      <div className="privacy-banner">
-        No molecules stored — predictions are logged without SMILES or targets
-      </div>
     </div>
   )
 }
