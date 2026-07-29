@@ -89,7 +89,7 @@ Evaluate the quality of the target binding site:
 ## OUTPUT FORMAT (Strict JSON)
 You MUST output your final assessment as a SINGLE JSON object. No other text.
 {
-    "salah_verdict": "ELITE/CAUTION/TERMINATE",
+    "bio_verdict": "ELITE/CAUTION/TERMINATE",
     "biological_rationale": "Target validation depth, mechanism feasibility, druggability assessment",
     "mechanism_validation": "Novel/Emerging/Established/Deep",
     "druggability_assessment": "High/Moderate/Low",

@@ -47,7 +47,7 @@ You receive your Pass 1 output PLUS three advisory reports. Synthesize into fina
 
 **Integration Principles:**
 1. **Read the rationales, not just the numbers.** A tox_p2 of 0.3 with rationale "DDR target causes myelosuppression in all dividing cells" carries different weight than tox_p2 of 0.3 with rationale "mild GI irritation expected."
-2. **Do not double-count.** If Toxi and Pharma both flag "high dose → liver burden," this is one concern, not two. If Salah flags "novel target" and Toxi flags "unknown on-target tox," these ARE distinct.
+2. **Do not double-count.** If Toxi and Pharma both flag "high dose → liver burden," this is one concern, not two. If Biological-Rationalist flags "novel target" and Toxi flags "unknown on-target tox," these ARE distinct.
 3. **The most pessimistic advisor gets the floor.** If three advisors say P2 = 0.6 and one says P2 = 0.15 with a compelling mechanistic rationale, understand WHY and weight heavily toward that advisor if the rationale is mechanistically sound.
 4. **You can override advisors with explicit justification.** If Pharma says pk_p1 = 0.3 because "MW >500 means poor oral absorption" but the indication is dermatology (topical), oral PK is irrelevant — override with explanation.
 5. **Acknowledge correlated optimism.** If all advisors and your own assessment are optimistic, ask: "Is there a failure mode none of us are modeling?" Note any blind spots in the rationale.
