@@ -144,7 +144,7 @@ export default function App() {
                       background: 'rgba(74, 158, 255, 0.15)',
                       color: 'var(--accent-blue)',
                       border: '1px solid rgba(74, 158, 255, 0.3)',
-                      borderRadius: 8,
+                      borderRadius: 0,
                       fontWeight: 700,
                       cursor: 'pointer',
                       fontSize: '0.9rem'
@@ -174,7 +174,7 @@ export default function App() {
                       background: 'rgba(46, 204, 113, 0.15)',
                       color: 'var(--accent-green)',
                       border: '1px solid rgba(46, 204, 113, 0.3)',
-                      borderRadius: 8,
+                      borderRadius: 0,
                       fontWeight: 700,
                       cursor: 'pointer',
                       fontSize: '0.9rem'
@@ -193,7 +193,7 @@ export default function App() {
                     background: 'var(--accent-blue)',
                     color: '#000',
                     border: 'none',
-                    borderRadius: 8,
+                    borderRadius: 0,
                     fontWeight: 700,
                     cursor: 'pointer',
                     fontSize: '0.9rem',
@@ -304,7 +304,7 @@ export default function App() {
                         background: 'rgba(74, 158, 255, 0.15)',
                         color: 'var(--accent-blue)',
                         border: '1px solid rgba(74, 158, 255, 0.3)',
-                        borderRadius: 6,
+                        borderRadius: 0,
                         padding: '6px 12px',
                         fontSize: '0.75rem',
                         fontWeight: 700,
@@ -331,7 +331,7 @@ export default function App() {
                         background: 'rgba(46, 204, 113, 0.15)',
                         color: 'var(--accent-green)',
                         border: '1px solid rgba(46, 204, 113, 0.3)',
-                        borderRadius: 6,
+                        borderRadius: 0,
                         padding: '6px 12px',
                         fontSize: '0.75rem',
                         fontWeight: 700,
@@ -362,7 +362,7 @@ export default function App() {
                 <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <li>Visit the public AlphaForge Verification Portal at: <strong style={{ color: 'var(--accent-blue)' }}>http://136.119.133.178:4003/verify</strong> and enter the SHA-256 fingerprint shown above. This will instantly query the immutable server logs to verify all assessment details.</li>
                   <li>Alternatively, click <strong>Download Manifest</strong> and <strong>Download TSR Signature</strong>, and audit them together using this OpenSSL command:
-                    <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
+                    <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 0, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
                       openssl ts -verify -data AlphaForge_Prediction_Manifest.txt -in AlphaForge_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
                     </code>
                   </li>
@@ -650,7 +650,7 @@ function UsagePage() {
               flex: 1,
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
-              borderRadius: 8,
+              borderRadius: 0,
               padding: '10px 14px',
               color: 'var(--text-primary)'
             }}
@@ -662,7 +662,7 @@ function UsagePage() {
               background: 'var(--accent-blue)',
               color: '#000',
               border: 'none',
-              borderRadius: 8,
+              borderRadius: 0,
               padding: '10px 20px',
               fontWeight: 700,
               cursor: 'pointer'
@@ -792,7 +792,7 @@ function UsagePage() {
               <h3 style={{ fontSize: '1.2rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-orange)' }}>👑 Admin Control Panel</h3>
               
               {/* Database GCS Backup Control */}
-              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24, textAlign: 'left' }}>
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 0, padding: 20, marginBottom: 24, textAlign: 'left' }}>
                 <h4 style={{ fontSize: '0.95rem', marginBottom: 10, color: 'var(--accent-green)' }}>
                   💾 GCS Cloud Backup Manager
                 </h4>
@@ -801,8 +801,8 @@ function UsagePage() {
                 </p>
 
                 {backupError && <div className="error-msg" style={{ marginBottom: 14, padding: '8px 12px', fontSize: '0.8rem' }}>{backupError}</div>}
-                {backupWarning && <div style={{ color: 'var(--accent-orange)', background: 'rgba(255, 140, 0, 0.1)', border: '1px solid rgba(255, 140, 0, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{backupWarning}</div>}
-                {backupSuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{backupSuccess}</div>}
+                {backupWarning && <div style={{ color: 'var(--accent-orange)', background: 'rgba(255, 140, 0, 0.1)', border: '1px solid rgba(255, 140, 0, 0.25)', borderRadius: 0, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{backupWarning}</div>}
+                {backupSuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 0, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{backupSuccess}</div>}
 
                 <button 
                   onClick={handleRunBackup}
@@ -812,7 +812,7 @@ function UsagePage() {
                     background: 'var(--accent-green)', 
                     color: '#000', 
                     border: 'none', 
-                    borderRadius: 6, 
+                    borderRadius: 0, 
                     fontWeight: 700, 
                     cursor: 'pointer', 
                     fontSize: '0.85rem',
@@ -824,7 +824,7 @@ function UsagePage() {
               </div>
 
               {/* Dynamic Concurrency Control */}
-              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24 }}>
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 0, padding: 20, marginBottom: 24 }}>
                 <h4 style={{ fontSize: '0.95rem', marginBottom: 10, color: 'var(--accent-cyan)' }}>
                   ⚙️ Dynamic Concurrency Control
                 </h4>
@@ -833,7 +833,7 @@ function UsagePage() {
                 </p>
 
                 {concurrencyError && <div className="error-msg" style={{ marginBottom: 14, padding: '8px 12px', fontSize: '0.8rem' }}>{concurrencyError}</div>}
-                {concurrencySuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{concurrencySuccess}</div>}
+                {concurrencySuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 0, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{concurrencySuccess}</div>}
 
                 <form onSubmit={handleSaveConfig} style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
@@ -845,23 +845,23 @@ function UsagePage() {
                       max="5000"
                       value={formConcurrency}
                       onChange={(e) => setFormConcurrency(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem' }}
+                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 0, color: '#fff', fontSize: '0.85rem' }}
                     />
                   </div>
-                  <button type="submit" style={{ padding: '9px 20px', background: 'var(--accent-blue)', color: '#000', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <button type="submit" style={{ padding: '9px 20px', background: 'var(--accent-blue)', color: '#000', border: 'none', borderRadius: 0, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
                     Apply Limit Live
                   </button>
                 </form>
               </div>
 
               {/* Key Management Form */}
-              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 24 }}>
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 0, padding: 20, marginBottom: 24 }}>
                 <h4 style={{ fontSize: '0.95rem', marginBottom: 14, color: 'var(--text-primary)' }}>
                   {formKey ? '✏️ Edit API Key' : '➕ Register New API Key'}
                 </h4>
                 
                 {adminError && <div className="error-msg" style={{ marginBottom: 14, padding: '8px 12px', fontSize: '0.8rem' }}>{adminError}</div>}
-                {adminSuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 6, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{adminSuccess}</div>}
+                {adminSuccess && <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid rgba(46, 204, 113, 0.25)', borderRadius: 0, padding: '8px 12px', fontSize: '0.8rem', marginBottom: 14 }}>{adminSuccess}</div>}
 
                 <form onSubmit={handleSaveKey} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="form-group" style={{ gridColumn: 'span 2' }}>
@@ -872,7 +872,7 @@ function UsagePage() {
                       placeholder="e.g. New User"
                       value={formOwner}
                       onChange={(e) => setFormOwner(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem' }}
+                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 0, color: '#fff', fontSize: '0.85rem' }}
                     />
                   </div>
 
@@ -886,7 +886,7 @@ function UsagePage() {
                       placeholder={formKey ? '' : "e.g. custom_key_string..."}
                       value={formKey}
                       onChange={(e) => setFormKey(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', background: formKey ? 'var(--bg-card)' : 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem', opacity: formKey ? 0.6 : 1 }}
+                      style={{ width: '100%', padding: '8px 12px', background: formKey ? 'var(--bg-card)' : 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 0, color: '#fff', fontSize: '0.85rem', opacity: formKey ? 0.6 : 1 }}
                     />
                   </div>
 
@@ -898,7 +898,7 @@ function UsagePage() {
                       placeholder="Use -1 for unlimited"
                       value={formLimit}
                       onChange={(e) => setFormLimit(parseInt(e.target.value) || -1)}
-                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 6, color: '#fff', fontSize: '0.85rem' }}
+                      style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 0, color: '#fff', fontSize: '0.85rem' }}
                     />
                   </div>
 
@@ -914,11 +914,11 @@ function UsagePage() {
                   </div>
 
                   <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10 }}>
-                    <button type="submit" style={{ padding: '8px 16px', background: 'var(--accent-orange)', color: '#000', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <button type="submit" style={{ padding: '8px 16px', background: 'var(--accent-orange)', color: '#000', border: 'none', borderRadius: 0, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
                       {formKey ? 'Save Changes' : 'Register Key'}
                     </button>
                     {formKey && (
-                      <button type="button" onClick={resetForm} style={{ padding: '8px 16px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <button type="button" onClick={resetForm} style={{ padding: '8px 16px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 0, cursor: 'pointer', fontSize: '0.85rem' }}>
                         Cancel Edit
                       </button>
                     )}
@@ -1063,7 +1063,7 @@ function VerifyPage() {
     <div className="usage-container" style={{ maxWidth: '800px', textAlign: 'center' }}>
       <h2 className="usage-title">🛡️ AlphaForge Prediction Verification Portal</h2>
       
-      <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.08)', border: '1px solid rgba(46, 204, 113, 0.2)', borderRadius: 12, padding: '10px 18px', display: 'inline-block', fontSize: '0.85rem', fontWeight: 700, marginBottom: 20 }}>
+      <div style={{ color: 'var(--accent-green)', background: 'rgba(46, 204, 113, 0.08)', border: '1px solid rgba(46, 204, 113, 0.2)', borderRadius: 0, padding: '10px 18px', display: 'inline-block', fontSize: '0.85rem', fontWeight: 700, marginBottom: 20 }}>
         🔒 Total Registered Cryptographic Timestamps: {totalTimestamps}
       </div>
 
@@ -1084,7 +1084,7 @@ function VerifyPage() {
                 flex: 1,
                 background: 'var(--bg-secondary)',
                 border: '1px solid var(--border)',
-                borderRadius: 8,
+                borderRadius: 0,
                 padding: '10px 14px',
                 color: 'var(--text-primary)',
                 fontFamily: 'monospace',
@@ -1099,7 +1099,7 @@ function VerifyPage() {
                 background: 'var(--accent-blue)',
                 color: '#000',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 0,
                 padding: '10px 24px',
                 fontWeight: 700,
                 cursor: 'pointer'
@@ -1156,7 +1156,7 @@ function VerifyPage() {
                       background: 'rgba(74, 158, 255, 0.15)',
                       color: 'var(--accent-blue)',
                       border: '1px solid rgba(74, 158, 255, 0.3)',
-                      borderRadius: 6,
+                      borderRadius: 0,
                       padding: '8px 14px',
                       fontSize: '0.8rem',
                       fontWeight: 700,
@@ -1183,7 +1183,7 @@ function VerifyPage() {
                       background: 'rgba(46, 204, 113, 0.15)',
                       color: 'var(--accent-green)',
                       border: '1px solid rgba(46, 204, 113, 0.3)',
-                      borderRadius: 6,
+                      borderRadius: 0,
                       padding: '8px 14px',
                       fontSize: '0.8rem',
                       fontWeight: 700,
@@ -1213,7 +1213,7 @@ function VerifyPage() {
                 <li>Click <strong>Download Manifest</strong> to download the plain-text <code>AlphaForge_Prediction_Manifest.txt</code> file.</li>
                 <li>Click <strong>Download TSR Signature</strong> to download the binary <code>AlphaForge_TSA_Certificate.tsr</code> signature token.</li>
                 <li>Audit both files together to prove mathematical authenticity using OpenSSL:
-                  <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
+                  <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 0, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
                     openssl ts -verify -data AlphaForge_Prediction_Manifest.txt -in AlphaForge_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem
                   </code>
                 </li>

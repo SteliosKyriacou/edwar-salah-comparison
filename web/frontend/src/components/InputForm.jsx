@@ -47,7 +47,7 @@ export default function InputForm({ onSubmit, loading }) {
             onClick={() => handleExample(ex)}
             style={{
               padding: '4px 10px',
-              borderRadius: 6,
+              borderRadius: 0,
               border: '1px solid var(--border)',
               background: 'var(--bg-secondary)',
               color: 'var(--accent-blue)',
@@ -111,7 +111,7 @@ export default function InputForm({ onSubmit, loading }) {
             alignItems: 'flex-start',
             gap: 12,
             padding: '12px 14px',
-            borderRadius: 8,
+            borderRadius: 0,
             border: '1px solid var(--border)',
             background: 'var(--bg-secondary)',
           }}
@@ -126,7 +126,7 @@ export default function InputForm({ onSubmit, loading }) {
               flexShrink: 0,
               width: 44,
               height: 24,
-              borderRadius: 12,
+              borderRadius: 0,
               border: 'none',
               cursor: 'pointer',
               padding: 2,

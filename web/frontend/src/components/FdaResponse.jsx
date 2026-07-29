@@ -28,7 +28,7 @@ export default function FdaResponse({ fda }) {
       <div
         style={{
           padding: '18px 22px',
-          borderRadius: 10,
+          borderRadius: 0,
           border: `1px solid ${overall.border}`,
           background: overall.bg,
         }}
@@ -73,7 +73,7 @@ export default function FdaResponse({ fda }) {
                   display: 'flex',
                   gap: 10,
                   padding: '10px 12px',
-                  borderRadius: 8,
+                  borderRadius: 0,
                   background: 'rgba(0,0,0,0.18)',
                   borderLeft: `3px solid ${EVENT_COLORS[ev.sentiment] || EVENT_COLORS.neutral}`,
                 }}

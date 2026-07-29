@@ -20,7 +20,7 @@ export default function WebSearchSummary({ webSearch }) {
         style={{
           margin: '24px 0',
           padding: '16px 20px',
-          borderRadius: 10,
+          borderRadius: 0,
           border: '1px solid var(--border)',
           background: 'var(--bg-secondary)',
           fontSize: '0.85rem',
@@ -43,7 +43,7 @@ export default function WebSearchSummary({ webSearch }) {
             fontSize: '0.7rem',
             fontWeight: 600,
             padding: '2px 8px',
-            borderRadius: 10,
+            borderRadius: 0,
             verticalAlign: 'middle',
             color: validated ? 'var(--accent-green, #2ecc71)' : 'var(--text-muted)',
             background: 'rgba(46, 204, 113, 0.12)',
@@ -56,7 +56,7 @@ export default function WebSearchSummary({ webSearch }) {
       <div
         style={{
           padding: '18px 22px',
-          borderRadius: 10,
+          borderRadius: 0,
           border: '1px solid var(--border)',
           background: 'var(--bg-secondary)',
         }}
