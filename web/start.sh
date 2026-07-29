@@ -3,6 +3,7 @@
 # Backend (FastAPI) on 8001, Frontend (Vite) on 4003 with proxy to backend
 
 set -e
+export PYTHONUNBUFFERED=1
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Kill anything on ports 4003 and 8001
