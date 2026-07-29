@@ -20,16 +20,33 @@ LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 TCSP_CEIL = 0.40
 
 
-def _load_prompt(name):
-    path = os.path.join(BASE, "Agents", name, "INSTRUCTIONS.md")
-    with open(path) as f:
-        return f.read()
+def _load_prompt(agent_name):
+    path = os.path.join(BASE, "Agent.md")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Consolidated prompt file Agent.md not found at {path}")
+    with open(path, "r") as f:
+        content = f.read()
+
+    # Find section starting with the agent name
+    header = f"# {agent_name}"
+    start_idx = content.find(header)
+    if start_idx == -1:
+        raise ValueError(f"Could not find instructions for {agent_name} in Agent.md")
+
+    # The instructions start after the header line
+    start_idx = content.find("\n", start_idx) + 1
+
+    # Find next header to determine end index
+    next_idx = content.find("\n# ", start_idx)
+    if next_idx == -1:
+        return content[start_idx:].strip()
+    return content[start_idx:next_idx].strip()
 
 
-MEDCHEM_PROMPT = _load_prompt("medchem-rationalist")
-BIO_PROMPT = _load_prompt("biological-rationalist")
-TOXI_PROMPT = _load_prompt("toxi-predictive-toxicologist")
-PHARMA_PROMPT = _load_prompt("pharma-clinical-pharmacologist")
+MEDCHEM_PROMPT = _load_prompt("MedChem-Rationalist")
+BIO_PROMPT = _load_prompt("Biological-Rationalist")
+TOXI_PROMPT = _load_prompt("Toxi-Predictive-Toxicologist")
+PHARMA_PROMPT = _load_prompt("Pharma-Clinical-Pharmacologist")
 
 llm = ChatVertexAI(
     model="gemini-3.1-pro-preview",
