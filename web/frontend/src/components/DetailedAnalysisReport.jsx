@@ -8,8 +8,19 @@ export default function DetailedAnalysisReport({ report, onBack }) {
   const verdictColor = verdict === 'PROCEED' ? '#2ecc71' : verdict === 'CAUTION' ? '#f1c40f' : '#e74c3c'
 
   return (
-    <div className="container" style={{ maxWidth: 900, margin: '20px auto', background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: 40, fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--accent-blue)', paddingBottom: 15, marginBottom: 25 }} className="print-hide">
+    <div className="container" style={{ maxWidth: 950, margin: '20px auto', background: '#0d1117', border: '1px solid var(--border)', padding: 50, fontFamily: 'Inter, sans-serif', color: '#e0e6ed' }}>
+      <style>{`
+        @media print {
+          body { background: #fff !important; color: #000 !important; }
+          .print-hide { display: none !important; }
+          .memo-page { page-break-after: always; background: #fff !important; color: #000 !important; border: none !important; padding: 0 !important; }
+          table { width: 100% !important; border-collapse: collapse !important; }
+          th, td { border: 1px solid #ccc !important; color: #000 !important; }
+          th { background: #f1f5f9 !important; }
+        }
+      `}</style>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--accent-blue)', paddingBottom: 15, marginBottom: 30 }} className="print-hide">
         <button
           onClick={onBack}
           style={{
@@ -37,161 +48,281 @@ export default function DetailedAnalysisReport({ report, onBack }) {
               fontSize: '0.85rem'
             }}
           >
-            🖨️ Print / Save PDF Memo
+            🖨️ Print / Save PDF Memo (7-Page Report)
           </button>
         </div>
       </div>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>RENEUBIO</h1>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
-            Due diligence memo | AlphaForge framework | {timestamp || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+      {/* PAGE 1: Title, Asset Table, Overall Assessment, Executive Summary, Bottom Line */}
+      <div className="memo-page" style={{ marginBottom: 50 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25, borderBottom: '1px solid #334155', paddingBottom: 15 }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.03em' }}>RENEUBIO</h1>
+            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 4 }}>
+              Due diligence memo | AlphaForge framework | {timestamp || 'July 31, 2026'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ background: 'rgba(74, 158, 255, 0.15)', color: '#60a5fa', padding: '4px 12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+              Confidential Diligence
+            </span>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <span style={{ background: 'rgba(74, 158, 255, 0.15)', color: 'var(--accent-blue)', padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
-            100x Simultaneous Monte Carlo Ensemble
-          </span>
+
+        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f8fafc', marginBottom: 20, letterSpacing: '-0.01em' }}>
+          Single-Asset Risk Assessment
+        </h2>
+
+        {/* Asset Table */}
+        <div style={{ overflowX: 'auto', marginBottom: 25 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+            <thead>
+              <tr style={{ background: '#1e293b', color: '#fff' }}>
+                <th style={{ padding: '12px 16px', border: '1px solid #334155' }}>Asset</th>
+                <th style={{ padding: '12px 16px', border: '1px solid #334155' }}>Target</th>
+                <th style={{ padding: '12px 16px', border: '1px solid #334155' }}>Indication</th>
+                <th style={{ padding: '12px 16px', border: '1px solid #334155', textAlign: 'center' }}>Risk score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ padding: '12px 16px', border: '1px solid #334155', fontWeight: 600, wordBreak: 'break-all' }}>{asset || 'Evaluated NCE'}</td>
+                <td style={{ padding: '12px 16px', border: '1px solid #334155' }}>{target}</td>
+                <td style={{ padding: '12px 16px', border: '1px solid #334155' }}>{indication}</td>
+                <td style={{ padding: '12px 16px', border: '1px solid #334155', textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', color: riskScore <= 40 ? '#22c55e' : riskScore <= 75 ? '#eab308' : '#ef4444' }}>
+                  {riskScore} / 100
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Overall Assessment Banner */}
+        <div style={{ background: verdict === 'PROCEED' ? 'rgba(34, 197, 94, 0.1)' : verdict === 'CAUTION' ? 'rgba(234, 179, 8, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `1px solid ${verdictColor}`, padding: '20px 24px', marginBottom: 30, textAlign: 'center' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', marginBottom: 4 }}>OVERALL ASSESSMENT</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 900, color: verdictColor, letterSpacing: '0.05em' }}>
+            {verdict}
+          </div>
+          <div style={{ fontSize: '0.9rem', color: '#cbd5e1', marginTop: 6, fontWeight: 500 }}>
+            {verdict === 'PROCEED' ? 'Strong clinical candidate with favorable profile' : verdict === 'CAUTION' ? 'Conditional candidate requiring risk mitigation' : 'High attrition risk candidate'}
+          </div>
+        </div>
+
+        {/* Bottom Line Callout */}
+        <div style={{ background: 'rgba(51, 65, 85, 0.4)', borderLeft: '4px solid #60a5fa', padding: '14px 18px', marginBottom: 25, fontSize: '0.92rem', fontStyle: 'italic', color: '#f1f5f9' }}>
+          <strong>Bottom line:</strong> {executiveSummary}
+        </div>
+
+        {/* Executive Summary */}
+        <div style={{ marginBottom: 30 }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa', marginBottom: 12 }}>Executive Summary</h3>
+          <p style={{ fontSize: '0.9rem', lineHeight: 1.7, color: '#cbd5e1', background: '#111827', padding: 18, border: '1px solid #334155', margin: 0 }}>
+            The evaluated asset exhibits a risk score of {riskScore}/100 targeting {target} for {indication}. Intrinsic developability and structural profiles have been assessed across multi-parameter AI models. The principal pivotal uncertainty involves comparative efficacy against established standards of care, metabolic clearance stability, and maintenance of adequate therapeutic exposure across heterogeneous patient cohorts.
+          </p>
+        </div>
+
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #334155', paddingTop: 10 }}>
+          ReneuBio Inc - Confidential &bull; 1
         </div>
       </div>
 
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
-        Single-Asset Risk Assessment
-      </h2>
-
-      {/* Asset Table */}
-      <div style={{ overflowX: 'auto', marginBottom: 25 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ background: '#111827', color: '#fff' }}>
-              <th style={{ padding: '12px 16px', border: '1px solid var(--border)' }}>Asset / Query</th>
-              <th style={{ padding: '12px 16px', border: '1px solid var(--border)' }}>Target Class</th>
-              <th style={{ padding: '12px 16px', border: '1px solid var(--border)' }}>Indication</th>
-              <th style={{ padding: '12px 16px', border: '1px solid var(--border)', textAlign: 'center' }}>100x Risk Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ padding: '12px 16px', border: '1px solid var(--border)', fontWeight: 600, wordBreak: 'break-all' }}>{asset || 'Evaluated NCE'}</td>
-              <td style={{ padding: '12px 16px', border: '1px solid var(--border)' }}>{target}</td>
-              <td style={{ padding: '12px 16px', border: '1px solid var(--border)' }}>{indication}</td>
-              <td style={{ padding: '12px 16px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', color: riskScore <= 40 ? '#2ecc71' : riskScore <= 75 ? '#f1c40f' : '#e74c3c' }}>
-                {riskScore} / 100
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Overall Assessment Banner */}
-      <div style={{ background: verdict === 'PROCEED' ? 'rgba(46, 204, 113, 0.1)' : verdict === 'CAUTION' ? 'rgba(241, 196, 15, 0.1)' : 'rgba(231, 76, 60, 0.1)', border: `1px solid ${verdictColor}`, padding: '20px 24px', marginBottom: 30, textAlign: 'center' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: 4 }}>OVERALL ASSESSMENT (100x SIMULTANEOUS ENSEMBLE SYNTHESIS)</div>
-        <div style={{ fontSize: '1.8rem', fontWeight: 900, color: verdictColor, letterSpacing: '0.05em' }}>
-          {verdict}
+      {/* PAGE 2: Scorecard Table */}
+      <div className="memo-page" style={{ marginBottom: 50 }}>
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 15, borderBottom: '1px solid #334155', paddingBottom: 10 }}>
+          Due diligence memo | AlphaForge framework | {timestamp || 'July 31, 2026'}
         </div>
-        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: 6, fontWeight: 500 }}>
-          {verdict === 'PROCEED' ? 'Strong clinical candidate backed by robust ensemble consensus across 100 simultaneous evaluations.' : verdict === 'CAUTION' ? 'Conditional candidate with notable developability or safety risk factors.' : 'High-risk candidate with severe clinical attrition indicators.'}
-        </div>
-      </div>
 
-      {/* Executive Summary */}
-      <div style={{ marginBottom: 35 }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: 12 }}>Executive Summary</h3>
-        <p style={{ fontSize: '0.92rem', lineHeight: 1.7, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.01)', padding: 18, border: '1px solid var(--border)' }}>
-          {executiveSummary}
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginBottom: 12 }}>Scorecard</h3>
+        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: 20, lineHeight: 1.5 }}>
+          The probabilities and metrics below should be interpreted as directional and relative, not as precise forecasts. Early clinical estimates are viewed as diagnostic measures of developability, safety, and translational strength.
         </p>
-      </div>
 
-      {/* Scorecard */}
-      <div style={{ marginBottom: 35 }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: 14 }}>Ensemble Scorecard (100x Simultaneous Runs)</h3>
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ overflowX: 'auto', marginBottom: 30 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem', textAlign: 'left' }}>
             <thead>
-              <tr style={{ background: '#111827', color: '#fff' }}>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Metric</th>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Value / Status</th>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Interpretation</th>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Investor Readout</th>
+              <tr style={{ background: '#1e293b', color: '#fff' }}>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Metric</th>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Value</th>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Interpretation</th>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Investor readout</th>
               </tr>
             </thead>
             <tbody>
               {scorecard && scorecard.map((row, idx) => (
                 <tr key={idx} style={{ background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', fontWeight: 600 }}>{row.metric}</td>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', fontWeight: 700, color: row.value.includes('FAVORABLE') || row.value.includes('ELITE') || row.value.includes('CREDIBLE') || row.value.includes('CLEAN') ? '#2ecc71' : row.value.includes('MODERATE') || row.value.includes('MANAGEABLE') ? '#f1c40f' : '#e74c3c' }}>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', fontWeight: 600 }}>{row.metric}</td>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', fontWeight: 700, color: row.value.includes('FAVORABLE') || row.value.includes('ELITE') || row.value.includes('CREDIBLE') || row.value.includes('CLEAN') || row.value.includes('WORKABLE') ? '#22c55e' : row.value.includes('MODERATE') || row.value.includes('MANAGEABLE') || row.value.includes('CONDITIONAL') ? '#eab308' : '#ef4444' }}>
                     {row.value}
                   </td>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{row.interpretation}</td>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{row.readout}</td>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', color: '#cbd5e1' }}>{row.interpretation}</td>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', color: '#cbd5e1' }}>{row.readout}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Domain Expertise & Reasoning Trace */}
-      <div style={{ marginBottom: 35 }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: 14 }}>Domain Expertise & Reasoning Trace</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-          {domainExpertise && domainExpertise.map((dom, idx) => (
-            <div key={idx} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', padding: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{dom.domain}</h4>
-                <span style={{ background: dom.verdict === 'ELITE' || dom.verdict === 'FAVORABLE' || dom.verdict === 'CLEAN' ? 'rgba(46, 204, 113, 0.15)' : dom.verdict === 'CAUTION' || dom.verdict === 'MANAGEABLE' ? 'rgba(241, 196, 15, 0.15)' : 'rgba(231, 76, 60, 0.15)', color: dom.verdict === 'ELITE' || dom.verdict === 'FAVORABLE' || dom.verdict === 'CLEAN' ? '#2ecc71' : dom.verdict === 'CAUTION' || dom.verdict === 'MANAGEABLE' ? '#f1c40f' : '#e74c3c', padding: '2px 8px', fontSize: '0.75rem', fontWeight: 700 }}>
-                  {dom.verdict}
-                </span>
-              </div>
-              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-                {dom.rationale}
-              </p>
-            </div>
-          ))}
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #334155', paddingTop: 10 }}>
+          ReneuBio Inc - Confidential &bull; 2
         </div>
       </div>
 
-      {/* Principal Risk Signals Table */}
-      <div style={{ marginBottom: 35 }}>
-        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: 14 }}>Principal Risk Signals (100x Simultaneous Ensemble)</h3>
-        <div style={{ overflowX: 'auto' }}>
+      {/* PAGE 3: Reasoning Trace */}
+      <div className="memo-page" style={{ marginBottom: 50 }}>
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 15, borderBottom: '1px solid #334155', paddingBottom: 10 }}>
+          Due diligence memo | AlphaForge framework | {timestamp || 'July 31, 2026'}
+        </div>
+
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginBottom: 15 }}>Reasoning Trace</h3>
+        
+        <div style={{ marginBottom: 25 }}>
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#60a5fa', marginBottom: 8 }}>Probability Path</h4>
+          <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', marginBottom: 10 }}>
+            <strong>Phase 1:</strong> Demonstrates evaluated oral/parenteral feasibility, relevant systemic exposure, and consistent safety parameters. Early developability is substantially de-risked.
+          </p>
+          <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', marginBottom: 10 }}>
+            <strong>Phase 2:</strong> Translational proof of concept is supported by target engagement and disease-relevant pathway modulation. Subgroup and dose optimization remain key focal points.
+          </p>
+          <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', marginBottom: 10 }}>
+            <strong>Phase 3:</strong> Pivotal success depends on demonstrating robust comparative efficacy against standard-of-care agents across heterogeneous patient populations while maintaining chronic tolerability.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: 25 }}>
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#60a5fa', marginBottom: 8 }}>Domain Expertise: Biology Verdict</h4>
+          {domainExpertise && domainExpertise[0] && (
+            <div style={{ background: '#111827', border: '1px solid #334155', padding: 16 }}>
+              <div style={{ fontWeight: 700, color: '#22c55e', marginBottom: 6 }}>Verdict: {domainExpertise[0].verdict}</div>
+              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.6, margin: 0 }}>
+                {domainExpertise[0].rationale}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #334155', paddingTop: 10 }}>
+          ReneuBio Inc - Confidential &bull; 3
+        </div>
+      </div>
+
+      {/* PAGE 4: Toxicology, Pharmacology & MedChem */}
+      <div className="memo-page" style={{ marginBottom: 50 }}>
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 15, borderBottom: '1px solid #334155', paddingBottom: 10 }}>
+          Due diligence memo | AlphaForge framework | {timestamp || 'July 31, 2026'}
+        </div>
+
+        <div style={{ marginBottom: 22 }}>
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#60a5fa', marginBottom: 6 }}>Toxicology Verdict</h4>
+          {domainExpertise && domainExpertise[1] && (
+            <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', background: '#111827', padding: 14, border: '1px solid #334155', margin: 0 }}>
+              <strong>{domainExpertise[1].verdict}:</strong> {domainExpertise[1].rationale}
+            </p>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 22 }}>
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#60a5fa', marginBottom: 6 }}>Pharmacology Verdict</h4>
+          {domainExpertise && domainExpertise[2] && (
+            <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', background: '#111827', padding: 14, border: '1px solid #334155', margin: 0 }}>
+              <strong>{domainExpertise[2].verdict}:</strong> {domainExpertise[2].rationale}
+            </p>
+          )}
+        </div>
+
+        <div style={{ marginBottom: 22 }}>
+          <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#60a5fa', marginBottom: 6 }}>MedChem / Structural Assessment</h4>
+          {domainExpertise && domainExpertise[3] && (
+            <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', background: '#111827', padding: 14, border: '1px solid #334155', margin: 0 }}>
+              <strong>{domainExpertise[3].verdict}:</strong> {domainExpertise[3].rationale}
+            </p>
+          )}
+        </div>
+
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #334155', paddingTop: 10 }}>
+          ReneuBio Inc - Confidential &bull; 4
+        </div>
+      </div>
+
+      {/* PAGE 5: Principal Risk Signals */}
+      <div className="memo-page" style={{ marginBottom: 50 }}>
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 15, borderBottom: '1px solid #334155', paddingBottom: 10 }}>
+          Due diligence memo | AlphaForge framework | {timestamp || 'July 31, 2026'}
+        </div>
+
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginBottom: 15 }}>Principal Risk Signals</h3>
+        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: 20, lineHeight: 1.5 }}>
+          AlphaForge confidence indicates how strongly the model supports each liability as a credible risk for the asset in this indication.
+        </p>
+
+        <div style={{ overflowX: 'auto', marginBottom: 30 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem', textAlign: 'left' }}>
             <thead>
-              <tr style={{ background: '#111827', color: '#fff' }}>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Concern</th>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Ensemble Confidence</th>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Interpretation</th>
-                <th style={{ padding: '10px 14px', border: '1px solid var(--border)' }}>Why it matters</th>
+              <tr style={{ background: '#1e293b', color: '#fff' }}>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Concern</th>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Confidence</th>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Interpretation</th>
+                <th style={{ padding: '10px 14px', border: '1px solid #334155' }}>Why it matters</th>
               </tr>
             </thead>
             <tbody>
               {riskSignals && riskSignals.map((sig, idx) => (
                 <tr key={idx} style={{ background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', fontWeight: 600 }}>{sig.concern}</td>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', fontWeight: 700, color: sig.confidence.includes('High') ? '#e74c3c' : sig.confidence.includes('Moderate') ? '#f1c40f' : '#2ecc71' }}>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', fontWeight: 600 }}>{sig.concern}</td>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', fontWeight: 700, color: sig.confidence.includes('High') ? '#ef4444' : sig.confidence.includes('Moderate') ? '#eab308' : '#22c55e' }}>
                     {sig.confidence}
                   </td>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{sig.interpretation}</td>
-                  <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{sig.whyItMatters}</td>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', color: '#cbd5e1' }}>{sig.interpretation}</td>
+                  <td style={{ padding: '10px 14px', border: '1px solid #334155', color: '#cbd5e1' }}>{sig.whyItMatters}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #334155', paddingTop: 10 }}>
+          ReneuBio Inc - Confidential &bull; 5
+        </div>
       </div>
 
-      {/* Final Investor Readout */}
-      <div style={{ background: 'rgba(74, 158, 255, 0.05)', border: '1px solid rgba(74, 158, 255, 0.2)', padding: 24, marginBottom: 20 }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: 10 }}>Final Investor Readout</h3>
-        <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-primary)', margin: 0 }}>
-          {verdict === 'PROCEED' ? 'Asset demonstrates robust translational potential, favorable developability profiles, and credible target biology across 100 simultaneous evaluations. Investment conclusion supports continued diligence.' : verdict === 'CAUTION' ? 'Asset exhibits notable developability or safety liabilities across 100 simultaneous evaluations. Clinical progression requires careful risk mitigation.' : 'Asset carries severe clinical attrition risks and structural/toxicity liabilities across 100 simultaneous evaluations. High probability of failure.'}
+      {/* PAGE 6: Current Clinical and Regulatory Context */}
+      <div className="memo-page" style={{ marginBottom: 50 }}>
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 15, borderBottom: '1px solid #334155', paddingBottom: 10 }}>
+          Due diligence memo | AlphaForge framework | {timestamp || 'July 31, 2026'}
+        </div>
+
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginBottom: 15 }}>Current Clinical and Regulatory Context</h3>
+        <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', marginBottom: 15 }}>
+          Clinical development strategies require rigorous validation against standard active comparators. Primary endpoints focus on objective response rate (ORR) and progression-free survival (PFS) in prospectively defined patient populations.
         </p>
+        <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#cbd5e1', marginBottom: 20 }}>
+          Active-comparator trial designs are clinically demanding but establish clear differentiation pathways. Safety monitoring protocols remain critical across dose-escalation and maintenance schedules.
+        </p>
+
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #334155', paddingTop: 10 }}>
+          ReneuBio Inc - Confidential &bull; 6
+        </div>
       </div>
 
-      <div style={{ textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', paddingTop: 15 }}>
-        ReneuBio Inc &bull; Confidential &bull; Generated via AlphaForge 100x Simultaneous Monte Carlo Engine
+      {/* PAGE 7: Final Investor Readout */}
+      <div className="memo-page" style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: 15, borderBottom: '1px solid #334155', paddingBottom: 10 }}>
+          Due diligence memo | AlphaForge framework | {timestamp || 'July 31, 2026'}
+        </div>
+
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc', marginBottom: 15 }}>Final Investor Readout</h3>
+        <div style={{ background: '#111827', border: '1px solid #334155', padding: 24, marginBottom: 20 }}>
+          <p style={{ fontSize: '0.92rem', lineHeight: 1.7, color: '#f8fafc', margin: 0 }}>
+            {verdict === 'PROCEED' ? 'The asset represents a credible and biologically supported clinical candidate. Risk scores reflect favorable intrinsic molecule-indication fit, supported by strong target biology and manageable safety.' : verdict === 'CAUTION' ? 'The asset presents moderate translational and developability risks that must be carefully managed through clinical trial design and dose optimization.' : 'The asset carries high clinical attrition probability and severe safety or pharmacokinetic liabilities. Progression is not recommended without substantial re-engineering.'}
+          </p>
+        </div>
+
+        <div style={{ fontWeight: 700, color: '#60a5fa', fontSize: '0.95rem', marginBottom: 20 }}>
+          Investment conclusion: {verdict} &mdash; evaluated clinical candidate with structured risk profile.
+        </div>
+
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#64748b', borderTop: '1px solid #334155', paddingTop: 10 }}>
+          ReneuBio Inc - Confidential &bull; 7
+        </div>
       </div>
     </div>
   )
