@@ -123,21 +123,6 @@ _queued_count = 0
 _key_evaluating_counts = {}  # { api_key: count }
 _key_queued_counts = {}      # { api_key: count }
 
-_queue_snapshots = []  # list of { timestamp, api_key, evaluating, queued, global_evaluating, global_queued }
-
-def _add_queue_snapshot(api_key: str):
-    _queue_snapshots.append({
-        "timestamp": datetime.utcnow().isoformat(),
-        "api_key": api_key,
-        "evaluating": _key_evaluating_counts.get(api_key, 0),
-        "queued": _key_queued_counts.get(api_key, 0),
-        "global_evaluating": _evaluating_count,
-        "global_queued": _queued_count
-    })
-    # Limit to last 2000 entries to prevent memory growth
-    if len(_queue_snapshots) > 2000:
-        _queue_snapshots.pop(0)
-
 
 def _authenticate_and_rate_limit(request: Request) -> dict:
     """Authenticate request using X-API-Key header or query parameter.
@@ -266,7 +251,6 @@ def _init_db():
                 timestamp TEXT NOT NULL,
                 api_key TEXT NOT NULL,
                 owner TEXT,
-                username TEXT,
                 smiles TEXT,
                 target TEXT,
                 indication TEXT,
@@ -277,16 +261,6 @@ def _init_db():
                 prediction_json TEXT
             );
         """)
-        # Ensure 'username' column exists on existing installations
-        try:
-            conn.execute("ALTER TABLE api_key_stats ADD COLUMN username TEXT;")
-        except sqlite3.OperationalError:
-            pass # already exists
-
-        # Assign all previous evaluations where username is null to owner, and fallback to 'Ramil'
-        conn.execute("UPDATE api_key_stats SET username = COALESCE(owner, 'Ramil') WHERE username IS NULL OR username = '';")
-        conn.execute("UPDATE api_key_stats SET username = 'Ramil' WHERE username = 'Unknown' OR username = 'Registered User';")
-
         # Create an index on the fingerprint for O(1) verification lookups
         conn.execute("CREATE INDEX IF NOT EXISTS idx_tsa_fingerprint ON api_key_stats(tsa_fingerprint);")
         # Create an index on api_key for fast stats queries
@@ -323,11 +297,6 @@ def _prime_rate_limiter_cache():
 @app.on_event("startup")
 def startup_event():
     _prime_rate_limiter_cache()
-
-    # Bypass Python's default thread-pool cap (typically 20-32) to support up to 5000 concurrent workers
-    from concurrent.futures import ThreadPoolExecutor
-    loop = asyncio.get_running_loop()
-    loop.set_default_executor(ThreadPoolExecutor(max_workers=5000, thread_name_prefix="asyncio_dynamic"))
 
 
 def _build_complete_manifest(owner: str, smiles: str, target: str, indication: str, timestamp: str, result: dict) -> str:
@@ -462,19 +431,17 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, 
     conn = _get_db_conn()
     try:
         pred_str = json.dumps(prediction_json) if prediction_json else None
-        username = owner if owner else "Ramil"
         conn.execute(
             """
             INSERT INTO api_key_stats (
-                timestamp, api_key, owner, username, smiles, target, indication, 
+                timestamp, api_key, owner, smiles, target, indication, 
                 tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.utcnow().isoformat(),
                 api_key,
                 owner,
-                username,
                 smiles.strip(),
                 target.strip(),
                 indication.strip(),
@@ -595,8 +562,6 @@ def get_usage(request: Request):
         "admin": is_admin,
         "evaluating_now": _key_evaluating_counts.get(api_key, 0),
         "queued_now": _key_queued_counts.get(api_key, 0),
-        "global_evaluating_now": _evaluating_count,
-        "global_queued_now": _queued_count,
         "stats": stats
     }
 
@@ -863,50 +828,6 @@ def verify_prediction(hash: str):
     raise HTTPException(404, "Evaluation not found. Please verify the SHA-256 fingerprint.")
 
 
-@app.get("/api/monitoring")
-def get_monitoring_data(request: Request, mode: str = "mine"):
-    # Authenticate via API Key to ensure they have a valid key
-    key_info = _authenticate_and_rate_limit(request)
-    api_key = key_info["key"]
-
-    if not os.path.exists(DB_FILE):
-        return {"runs": []}
-
-    conn = _get_db_conn()
-    try:
-        if mode == "mine":
-            cursor = conn.execute(
-                "SELECT id, timestamp, owner, target, username FROM api_key_stats WHERE api_key = ? ORDER BY id DESC LIMIT 2000",
-                (api_key,)
-            )
-        else:
-            cursor = conn.execute(
-                "SELECT id, timestamp, owner, target, username FROM api_key_stats ORDER BY id DESC LIMIT 2000"
-            )
-
-        runs = []
-        for row in cursor:
-            runs.append({
-                "id": row[0],
-                "timestamp": row[1],
-                "owner": row[2] or "Registered User",
-                "target": row[3],
-                "username": row[4] or row[2] or "Ramil"
-            })
-        runs.reverse() # Sort chronologically ascending for charts
-        # Filter queue snapshots
-        if mode == "mine":
-            filtered_snaps = [s for s in _queue_snapshots if s["api_key"] == api_key]
-        else:
-            filtered_snaps = _queue_snapshots
-
-        return {"runs": runs, "snapshots": filtered_snaps}
-    except Exception as e:
-        raise HTTPException(500, f"Database error: {e}")
-    finally:
-        conn.close()
-
-
 @app.get("/api/visits")
 def visits():
     return get_visits_summary()
@@ -936,7 +857,6 @@ async def analyze(req: AnalyzeRequest, request: Request):
     api_key = key_info["key"]
     _queued_count += 1
     _key_queued_counts[api_key] = _key_queued_counts.get(api_key, 0) + 1
-    _add_queue_snapshot(api_key)
     
     queued_decremented = False
     evaluating_incremented = False
@@ -950,7 +870,6 @@ async def analyze(req: AnalyzeRequest, request: Request):
             _evaluating_count += 1
             _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 1
             evaluating_incremented = True
-            _add_queue_snapshot(api_key)
             
             if req.mock:
                 # Simulate a 5-second analysis
@@ -988,7 +907,6 @@ async def analyze(req: AnalyzeRequest, request: Request):
         if evaluating_incremented:
             _evaluating_count -= 1
             _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 1)
-        _add_queue_snapshot(api_key)
 
     # Build secure plain-text manifest file content (fully detailed, including all verdicts/rationales!)
     ts_str = datetime.utcnow().isoformat()

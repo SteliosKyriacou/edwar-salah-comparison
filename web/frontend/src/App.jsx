@@ -400,35 +400,6 @@ function UsagePage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  // Real-time Monitoring Section state
-  const [mode, setMode] = useState('mine')
-  const [runs, setRuns] = useState([])
-  const [snapshots, setSnapshots] = useState([])
-  const [zoomMinutes, setZoomMinutes] = useState(60)
-
-  async function fetchMonitoring() {
-    if (!apiKey.trim()) return
-    try {
-      const res = await fetch(`/api/monitoring?api_key=${encodeURIComponent(apiKey)}&mode=${mode}`)
-      if (res.ok) {
-        const data = await res.json()
-        setRuns(data.runs || [])
-        setSnapshots(data.snapshots || [])
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // Fetch once and start interval
-  useEffect(() => {
-    if (apiKey) {
-      fetchMonitoring()
-      const interval = setInterval(fetchMonitoring, 5000)
-      return () => clearInterval(interval)
-    }
-  }, [apiKey, mode])
-
   // Admin form state
   const [formKey, setFormKey] = useState('')
   const [formOwner, setFormOwner] = useState('')
@@ -660,158 +631,8 @@ function UsagePage() {
     }
   }, [])
 
-  // Calculations for Monitoring charts & statistics
-  const parseUtcDate = (tsStr) => {
-    if (!tsStr) return new Date();
-    const clean = tsStr.endsWith('Z') ? tsStr : tsStr + 'Z';
-    return new Date(clean);
-  };
-
-  const getReferenceNow = () => {
-    if (runs.length > 0) {
-      const validTimes = runs
-        .map(r => parseUtcDate(r.timestamp).getTime())
-        .filter(t => !isNaN(t));
-      if (validTimes.length > 0) {
-        const maxTime = validTimes.reduce((max, t) => Math.max(max, t), validTimes[0]);
-        return new Date(maxTime);
-      }
-    }
-    return new Date();
-  };
-
-  const now = getReferenceNow();
-  const cutoffTime = new Date(now.getTime() - zoomMinutes * 60 * 1000);
-
-  // Filter runs within selected Zoom Time Window
-  const filteredRuns = runs.filter((run) => {
-    const runTime = parseUtcDate(run.timestamp);
-    return runTime >= cutoffTime;
-  });
-
-  const numPoints = 12;
-  const intervalMs = (zoomMinutes * 60 * 1000) / (numPoints - 1);
-  const chartData = [];
-
-  // Current live active count (updating in real-time from the latest polled snapshots)
-  const getActiveQueueCount = () => {
-    if (snapshots.length > 0) {
-      const latestSnap = snapshots[snapshots.length - 1];
-      return mode === 'mine'
-        ? ((latestSnap.evaluating ?? 0) + (latestSnap.queued ?? 0))
-        : ((latestSnap.global_evaluating ?? 0) + (latestSnap.global_queued ?? 0));
-    }
-    return info
-      ? (mode === 'mine' 
-         ? ((info.evaluating_now ?? 0) + (info.queued_now ?? 0))
-         : ((info.global_evaluating_now ?? 0) + (info.global_queued_now ?? 0)))
-      : 0;
-  };
-
-  const activeQueueCount = getActiveQueueCount();
-
-  for (let i = 0; i < numPoints; i++) {
-    const pointTime = new Date(cutoffTime.getTime() + i * intervalMs);
-
-    // 1. Reconstruct active runs from completed DB timestamps (90-second sliding completion window)
-    const activeRunsFromDb = runs.filter((run) => {
-      const rt = parseUtcDate(run.timestamp);
-      const diff = rt.getTime() - pointTime.getTime();
-      return diff > 0 && diff <= 90000; // 90 seconds in-flight estimation
-    }).length;
-
-    // 2. Also incorporate in-memory snapshots if available
-    const pointSnapshots = snapshots.filter((s) => parseUtcDate(s.timestamp) <= pointTime);
-    let activeQueueFromSnapshots = 0;
-    if (pointSnapshots.length > 0) {
-      const latestSnap = pointSnapshots[pointSnapshots.length - 1];
-      activeQueueFromSnapshots = mode === 'mine'
-        ? ((latestSnap.evaluating ?? 0) + (latestSnap.queued ?? 0))
-        : ((latestSnap.global_evaluating ?? 0) + (latestSnap.global_queued ?? 0));
-    }
-
-    // Blend: use the maximum or combine, and force current live value on the latest interval point
-    let activeQueueAtPoint = Math.max(activeRunsFromDb, activeQueueFromSnapshots);
-    if (i === numPoints - 1) {
-      activeQueueAtPoint = Math.max(activeQueueAtPoint, activeQueueCount);
-    }
-
-    // Local Rate (Rows/Min) calculation in a sliding window
-    const rateWindowMs = Math.max(60000, intervalMs); // Minimum 1 minute window
-    const rateWindowStart = new Date(pointTime.getTime() - rateWindowMs);
-    const runsInRateWindow = runs.filter((run) => {
-      const rt = parseUtcDate(run.timestamp);
-      return rt > rateWindowStart && rt <= pointTime;
-    }).length;
-
-    const rateWindowMin = rateWindowMs / 60000;
-    const rateRowsPerMin = parseFloat((runsInRateWindow / rateWindowMin).toFixed(1));
-
-    const hours = pointTime.getHours().toString().padStart(2, '0');
-    const minutes = pointTime.getMinutes().toString().padStart(2, '0');
-    const label = `${hours}:${minutes}`;
-
-    chartData.push({
-      time: pointTime,
-      label,
-      cumulative: activeQueueAtPoint, // mapped to cumulative for easy coordinate reuse
-      rate: rateRowsPerMin,
-    });
-  }
-
-  const currentRate = zoomMinutes > 0 ? (filteredRuns.length / zoomMinutes).toFixed(1) : '0.0';
-
-  let etaText = '--';
-  if (activeQueueCount > 0) {
-    const rateVal = parseFloat(currentRate);
-    if (rateVal > 0) {
-      const etaMin = activeQueueCount / rateVal;
-      if (etaMin < 1) {
-        etaText = `${Math.ceil(etaMin * 60)}s`;
-      } else {
-        etaText = `${etaMin.toFixed(1)} min`;
-      }
-    }
-  } else {
-    etaText = 'Completed';
-  }
-
-  // Chart coordinate helpers
-  const getX = (index) => 40 + (index / (numPoints - 1)) * 435;
-
-  const cumulativeVals = chartData.map((d) => d.cumulative);
-  const maxCumulative = Math.max(10, ...cumulativeVals);
-  const minCumulative = 0;
-  const getCumulativeY = (val) => 190 - ((val - minCumulative) / (maxCumulative - minCumulative)) * 165;
-
-  const rateVals = chartData.map((d) => d.rate);
-  const maxRate = Math.max(5, ...rateVals);
-  const minRate = 0;
-  const getRateY = (val) => 190 - ((val - minRate) / (maxRate - minRate)) * 165;
-
-  // Polyline paths for SVG
-  let progressPath = '';
-  let progressAreaPath = '';
-  if (chartData.length > 0) {
-    progressPath = `M ${getX(0)} ${getCumulativeY(chartData[0].cumulative)}`;
-    for (let i = 1; i < chartData.length; i++) {
-      progressPath += ` L ${getX(i)} ${getCumulativeY(chartData[i].cumulative)}`;
-    }
-    progressAreaPath = `${progressPath} L ${getX(chartData.length - 1)} 190 L ${getX(0)} 190 Z`;
-  }
-
-  let ratePath = '';
-  let rateAreaPath = '';
-  if (chartData.length > 0) {
-    ratePath = `M ${getX(0)} ${getRateY(chartData[0].rate)}`;
-    for (let i = 1; i < chartData.length; i++) {
-      ratePath += ` L ${getX(i)} ${getRateY(chartData[i].rate)}`;
-    }
-    rateAreaPath = `${ratePath} L ${getX(chartData.length - 1)} 190 L ${getX(0)} 190 Z`;
-  }
-
   return (
-    <div className="usage-container" style={{ maxWidth: info ? '1000px' : '600px' }}>
+    <div className="usage-container" style={{ maxWidth: info && info.admin ? '1000px' : '600px' }}>
       <h2 className="usage-title">🔑 AlphaForge API Key Usage</h2>
       
       <div className="form-group" style={{ marginBottom: 20 }}>
@@ -856,328 +677,55 @@ function UsagePage() {
 
       {info && (
         <>
-          {/* Real-time Monitoring Section */}
-          <div className="usage-card" style={{ padding: 24, marginTop: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 14 }}>
-              <h3 style={{ fontSize: '1.25rem', margin: 0, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                📊 Real-Time Clinical Pipeline Monitor
-              </h3>
-              
-              {/* Toggle Mode */}
-              <div style={{ display: 'inline-flex', background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: 4, borderRadius: 4 }}>
-                <button
-                  onClick={() => setMode('mine')}
-                  style={{
-                    background: mode === 'mine' ? 'var(--accent-blue)' : 'none',
-                    color: mode === 'mine' ? '#000' : 'var(--text-secondary)',
-                    border: 'none',
-                    padding: '6px 14px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    borderRadius: 2,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  My Runs Only
-                </button>
-                <button
-                  onClick={() => setMode('all')}
-                  style={{
-                    background: mode === 'all' ? 'var(--accent-blue)' : 'none',
-                    color: mode === 'all' ? '#000' : 'var(--text-secondary)',
-                    border: 'none',
-                    padding: '6px 14px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    borderRadius: 2,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  All Users' Runs
-                </button>
-              </div>
+          <div className="usage-card">
+            <h3 style={{ fontSize: '1.1rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-blue)' }}>📋 Key Profile & Quota</h3>
+            <div className="usage-item">
+              <span className="usage-label">Owner:</span>
+              <span className="usage-value active" style={{ fontSize: '1.05rem' }}>{info.owner}</span>
             </div>
-
-            {/* Metric Cards Top Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: 20, borderRadius: 6, textAlign: 'center' }}>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
-                  {activeQueueCount}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>ACTIVE JOBS</div>
-              </div>
-              
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: 20, borderRadius: 6, textAlign: 'center' }}>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#2ecc71', marginBottom: 4 }}>
-                  {currentRate}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>ROWS / MIN</div>
-              </div>
-
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: 20, borderRadius: 6, textAlign: 'center' }}>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  {etaText}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>ETA</div>
-              </div>
+            <div className="usage-item">
+              <span className="usage-label">Hourly Limit:</span>
+              <span className={`usage-value ${info.rate_limit < 0 ? 'unlimited' : ''}`}>
+                {info.rate_limit < 0 ? 'Unlimited' : info.rate_limit}
+              </span>
             </div>
-
-            {/* Charts Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }} className="usage-grid">
-              {/* Progress Chart */}
-              <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', padding: 16, borderRadius: 6 }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: 12 }}>Active Queue (Evaluating + Queued)</div>
-                <svg viewBox="0 0 500 220" style={{ width: '100%', height: 'auto', display: 'block' }}>
-                  <defs>
-                    <linearGradient id="progressGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4a9eff" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#4a9eff" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                    const y = 190 - ratio * 165;
-                    const val = Math.round(minCumulative + ratio * (maxCumulative - minCumulative));
-                    return (
-                      <g key={idx}>
-                        <line x1="40" y1={y} x2="475" y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-                        <text x="30" y={y + 4} fill="var(--text-muted)" fontSize="10" textAnchor="end">{val}</text>
-                      </g>
-                    );
-                  })}
-                  
-                  {/* X axis ticks & vertical gridlines */}
-                  {chartData.map((d, idx) => {
-                    const x = getX(idx);
-                    return (
-                      <g key={idx}>
-                        {idx > 0 && idx < chartData.length - 1 && (
-                          <line x1={x} y1="15" x2={x} y2="190" stroke="rgba(255,255,255,0.03)" />
-                        )}
-                        {(idx % 2 === 0 || idx === chartData.length - 1) && (
-                          <text x={x} y="208" fill="var(--text-muted)" fontSize="9" textAnchor="middle">{d.label}</text>
-                        )}
-                      </g>
-                    );
-                  })}
-
-                  {/* Gradient Area under curve */}
-                  {progressAreaPath && (
-                    <path d={progressAreaPath} fill="url(#progressGrad)" />
-                  )}
-
-                  {/* Curve Line */}
-                  {progressPath && (
-                    <path d={progressPath} fill="none" stroke="var(--accent-blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  )}
-
-                  {/* Data Points */}
-                  {chartData.map((d, idx) => {
-                    const x = getX(idx);
-                    const y = getCumulativeY(d.cumulative);
-                    return (
-                      <circle key={idx} cx={x} cy={y} r="3.5" fill="var(--bg-primary)" stroke="var(--accent-blue)" strokeWidth="2" />
-                    );
-                  })}
-                </svg>
-              </div>
-
-              {/* Rate Chart */}
-              <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', padding: 16, borderRadius: 6 }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: 12 }}>Rate (Rows/Min)</div>
-                <svg viewBox="0 0 500 220" style={{ width: '100%', height: 'auto', display: 'block' }}>
-                  <defs>
-                    <linearGradient id="rateGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2ecc71" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#2ecc71" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                    const y = 190 - ratio * 165;
-                    const val = (minRate + ratio * (maxRate - minRate)).toFixed(1);
-                    return (
-                      <g key={idx}>
-                        <line x1="40" y1={y} x2="475" y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
-                        <text x="30" y={y + 4} fill="var(--text-muted)" fontSize="10" textAnchor="end">{val}</text>
-                      </g>
-                    );
-                  })}
-                  
-                  {/* X axis ticks */}
-                  {chartData.map((d, idx) => {
-                    const x = getX(idx);
-                    return (
-                      <g key={idx}>
-                        {idx > 0 && idx < chartData.length - 1 && (
-                          <line x1={x} y1="15" x2={x} y2="190" stroke="rgba(255,255,255,0.03)" />
-                        )}
-                        {(idx % 2 === 0 || idx === chartData.length - 1) && (
-                          <text x={x} y="208" fill="var(--text-muted)" fontSize="9" textAnchor="middle">{d.label}</text>
-                        )}
-                      </g>
-                    );
-                  })}
-
-                  {/* Gradient Area under curve */}
-                  {rateAreaPath && (
-                    <path d={rateAreaPath} fill="url(#rateGrad)" />
-                  )}
-
-                  {/* Curve Line */}
-                  {ratePath && (
-                    <path d={ratePath} fill="none" stroke="#2ecc71" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  )}
-
-                  {/* Data Points */}
-                  {chartData.map((d, idx) => {
-                    const x = getX(idx);
-                    const y = getRateY(d.rate);
-                    return (
-                      <circle key={idx} cx={x} cy={y} r="3.5" fill="var(--bg-primary)" stroke="#2ecc71" strokeWidth="2" />
-                    );
-                  })}
-                </svg>
-              </div>
+            <div className="usage-item">
+              <span className="usage-label">Rolling Hour Usage:</span>
+              <span className="usage-value">{info.usage} predictions</span>
             </div>
-
-            {/* Slider and Target controls */}
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: '16px 20px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1, minWidth: '250px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                      🔍 Zoom Time Window:
-                    </span>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
-                      {zoomMinutes >= 60 ? `${(zoomMinutes / 60).toFixed(1)} hrs` : `${zoomMinutes} mins`}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="5"
-                    max="1440"
-                    step="5"
-                    value={zoomMinutes}
-                    onChange={(e) => setZoomMinutes(parseInt(e.target.value))}
-                    style={{
-                      width: '100%',
-                      cursor: 'pointer',
-                      accentColor: 'var(--accent-blue)',
-                      height: 6,
-                      background: 'rgba(255,255,255,0.1)',
-                      borderRadius: 3
-                    }}
-                  />
-                  {/* Preset Quick Buttons */}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    {[30, 60, 180, 360, 720, 1440].map((mins) => {
-                      const lbl = mins >= 60 ? `${mins/60}h` : `${mins}m`;
-                      return (
-                        <button
-                          key={mins}
-                          onClick={() => setZoomMinutes(mins)}
-                          style={{
-                            background: zoomMinutes === mins ? 'rgba(74, 158, 255, 0.2)' : 'rgba(255,255,255,0.05)',
-                            color: zoomMinutes === mins ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                            border: '1px solid ' + (zoomMinutes === mins ? 'var(--accent-blue)' : 'var(--border)'),
-                            padding: '3px 8px',
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            borderRadius: 3
-                          }}
-                        >
-                          {lbl}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+            <div className="usage-item">
+              <span className="usage-label">Remaining Quota:</span>
+              <span className={`usage-value ${info.remaining === 'unlimited' ? 'unlimited' : ''}`}>
+                {info.remaining === 'unlimited' ? 'Unlimited' : `${info.remaining} predictions`}
+              </span>
             </div>
-
-            {/* Scrollable logs box */}
-            <div style={{ background: '#070a13', border: '1px solid var(--border)', borderRadius: 6, padding: '14px 18px', maxHeight: '180px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-              {filteredRuns.length > 0 ? (
-                [...filteredRuns].reverse().map((run, index) => {
-                  const globalIdx = runs.findIndex(r => r.id === run.id) + 1;
-                  const runDate = new Date(run.timestamp);
-                  const formattedDate = runDate.toLocaleString();
-                  return (
-                    <div key={run.id} style={{ padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                      <span style={{ color: '#8892b0' }}>
-                        [{formattedDate}] &mdash; <span style={{ color: 'var(--text-primary)' }}>Completed evaluation #{globalIdx}</span>
-                      </span>
-                      <span style={{ color: 'var(--accent-blue)', fontSize: '0.75rem', opacity: 0.8 }}>
-                        {run.username || run.owner} ({run.target})
-                      </span>
-                    </div>
-                  );
-                })
-              ) : (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0' }}>
-                  No pipeline evaluations found within the selected time window.
-                </div>
-              )}
+            <div className="usage-item" style={{ borderTop: '1px dashed var(--border)', marginTop: 8, paddingTop: 12 }}>
+              <span className="usage-label" style={{ color: 'var(--accent-cyan)' }}>⏳ Currently Evaluating:</span>
+              <span className="usage-value" style={{ color: 'var(--accent-cyan)' }}>{info.evaluating_now ?? 0}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label" style={{ color: 'var(--accent-orange)' }}>👥 In Queue:</span>
+              <span className="usage-value" style={{ color: 'var(--accent-orange)' }}>{info.queued_now ?? 0}</span>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }} className="usage-grid">
-            <div className="usage-card" style={{ marginBottom: 0 }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-blue)' }}>📋 Key Profile & Quota</h3>
-              <div className="usage-item">
-                <span className="usage-label">Owner:</span>
-                <span className="usage-value active" style={{ fontSize: '1.05rem' }}>{info.owner}</span>
-              </div>
-              <div className="usage-item">
-                <span className="usage-label">Hourly Limit:</span>
-                <span className={`usage-value ${info.rate_limit < 0 ? 'unlimited' : ''}`}>
-                  {info.rate_limit < 0 ? 'Unlimited' : info.rate_limit}
-                </span>
-              </div>
-              <div className="usage-item">
-                <span className="usage-label">Rolling Hour Usage:</span>
-                <span className="usage-value">{info.usage} predictions</span>
-              </div>
-              <div className="usage-item">
-                <span className="usage-label">Remaining Quota:</span>
-                <span className={`usage-value ${info.remaining === 'unlimited' ? 'unlimited' : ''}`}>
-                  {info.remaining === 'unlimited' ? 'Unlimited' : `${info.remaining} predictions`}
-                </span>
-              </div>
-              <div className="usage-item" style={{ borderTop: '1px dashed var(--border)', marginTop: 8, paddingTop: 12 }}>
-                <span className="usage-label" style={{ color: 'var(--accent-cyan)' }}>⏳ Currently Evaluating:</span>
-                <span className="usage-value" style={{ color: 'var(--accent-cyan)' }}>{info.evaluating_now ?? 0}</span>
-              </div>
-              <div className="usage-item">
-                <span className="usage-label" style={{ color: 'var(--accent-orange)' }}>👥 In Queue:</span>
-                <span className="usage-value" style={{ color: 'var(--accent-orange)' }}>{info.queued_now ?? 0}</span>
-              </div>
+          <div className="usage-card">
+            <h3 style={{ fontSize: '1.1rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-purple)' }}>📈 Cumulative Key Statistics</h3>
+            <div className="usage-item">
+              <span className="usage-label">Total Predictions:</span>
+              <span className="usage-value">{info.stats?.total_predictions || 0}</span>
             </div>
-
-            <div className="usage-card" style={{ marginBottom: 0 }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 10, color: 'var(--accent-purple)' }}>📈 Cumulative Key Statistics</h3>
-              <div className="usage-item">
-                <span className="usage-label">Total Predictions:</span>
-                <span className="usage-value">{info.stats?.total_predictions || 0}</span>
-              </div>
-              <div className="usage-item">
-                <span className="usage-label">Unique Molecules Analyzed:</span>
-                <span className="usage-value">{info.stats?.unique_molecules || 0}</span>
-              </div>
-              <div className="usage-item">
-                <span className="usage-label">Unique Targets Analyzed:</span>
-                <span className="usage-value">{info.stats?.unique_targets || 0}</span>
-              </div>
-              <div className="usage-item">
-                <span className="usage-label">Unique Indications Analyzed:</span>
-                <span className="usage-value">{info.stats?.unique_indications || 0}</span>
-              </div>
+            <div className="usage-item">
+              <span className="usage-label">Unique Molecules Analyzed:</span>
+              <span className="usage-value">{info.stats?.unique_molecules || 0}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Unique Targets Analyzed:</span>
+              <span className="usage-value">{info.stats?.unique_targets || 0}</span>
+            </div>
+            <div className="usage-item">
+              <span className="usage-label">Unique Indications Analyzed:</span>
+              <span className="usage-value">{info.stats?.unique_indications || 0}</span>
             </div>
           </div>
 
