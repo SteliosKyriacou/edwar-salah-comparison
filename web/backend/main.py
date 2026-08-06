@@ -833,6 +833,45 @@ def verify_prediction(hash: str):
     raise HTTPException(404, "Evaluation not found. Please verify the SHA-256 fingerprint.")
 
 
+@app.get("/api/monitoring")
+def get_monitoring_data(request: Request, mode: str = "mine"):
+    # Authenticate via API Key to ensure they have a valid key
+    key_info = _authenticate_and_rate_limit(request)
+    api_key = key_info["key"]
+
+    if not os.path.exists(DB_FILE):
+        return {"runs": []}
+
+    conn = _get_db_conn()
+    try:
+        if mode == "mine":
+            cursor = conn.execute(
+                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint FROM api_key_stats WHERE api_key = ? ORDER BY id ASC",
+                (api_key,)
+            )
+        else:
+            cursor = conn.execute(
+                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint FROM api_key_stats ORDER BY id ASC"
+            )
+
+        runs = []
+        for row in cursor:
+            runs.append({
+                "id": row[0],
+                "timestamp": row[1],
+                "owner": row[2] or "Registered User",
+                "smiles": row[3],
+                "target": row[4],
+                "indication": row[5],
+                "tsa_fingerprint": row[6]
+            })
+        return {"runs": runs}
+    except Exception as e:
+        raise HTTPException(500, f"Database error: {e}")
+    finally:
+        conn.close()
+
+
 @app.get("/api/visits")
 def visits():
     return get_visits_summary()
