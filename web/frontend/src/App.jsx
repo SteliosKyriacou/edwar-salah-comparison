@@ -668,7 +668,15 @@ function UsagePage() {
     return new Date(clean);
   };
 
-  const now = new Date();
+  const getReferenceNow = () => {
+    if (runs.length > 0) {
+      const timestamps = runs.map(r => parseUtcDate(r.timestamp).getTime());
+      return new Date(Math.max(...timestamps));
+    }
+    return new Date();
+  };
+
+  const now = getReferenceNow();
   const cutoffTime = new Date(now.getTime() - zoomMinutes * 60 * 1000);
 
   // Filter runs within selected Zoom Time Window
