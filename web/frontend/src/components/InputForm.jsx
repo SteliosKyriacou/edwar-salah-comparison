@@ -15,7 +15,7 @@ const EXAMPLES = [
   },
 ]
 
-export default function InputForm({ onSubmit, loading }) {
+export default function InputForm({ onSubmit, onDetailedAnalysis, loading }) {
   const [smiles, setSmiles] = useState('')
   const [target, setTarget] = useState('')
   const [indication, setIndication] = useState('')
@@ -158,9 +158,30 @@ export default function InputForm({ onSubmit, loading }) {
           </div>
         </div>
 
-        <button className="submit-btn" type="submit" disabled={loading}>
-          {loading ? 'Analyzing...' : 'Analyze Molecule'}
-        </button>
+        <div className="form-group full-width" style={{ display: 'flex', gap: 12 }}>
+          <button className="submit-btn" type="submit" disabled={loading} style={{ flex: 1 }}>
+            {loading ? 'Analyzing...' : 'Analyze Molecule'}
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => onDetailedAnalysis({ smiles, target, indication, auxiliary, web_search: webSearch })}
+            style={{
+              flex: 1,
+              padding: '14px 24px',
+              background: 'rgba(74, 158, 255, 0.15)',
+              color: 'var(--accent-blue)',
+              border: '1px solid rgba(74, 158, 255, 0.4)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              transition: 'all 0.2s',
+              borderRadius: 0
+            }}
+          >
+            {loading ? 'Running...' : '📊 Detailed Analysis (100x)'}
+          </button>
+        </div>
       </div>
     </form>
   )

@@ -12,7 +12,7 @@ pkill -9 -f "vite" || true
 sleep 1
 
 echo "Starting backend on :8001..."
-conda run -n edwar-salah uvicorn main:app --host 0.0.0.0 --port 8001 \
+"$DIR/venv/bin/uvicorn" main:app --host 0.0.0.0 --port 8001 \
   --app-dir "$DIR/backend" &
 BACKEND_PID=$!
 
@@ -21,8 +21,8 @@ cd "$DIR/frontend" && npm run dev &
 FRONTEND_PID=$!
 
 echo ""
-echo "  App running at: https://willyourdrugsucceedintheclinic.stylianoskyriacou.ai"
-echo "  Dashboard:      https://willyourdrugsucceedintheclinic.stylianoskyriacou.ai/dashboard"
+  echo "  App running at: http://34.82.96.124:4003"
+  echo "  Dashboard:      http://34.82.96.124:4003/dashboard"
 echo "  Backend API:    http://localhost:8001/api/health"
 echo ""
 echo "  Press Ctrl+C to stop"

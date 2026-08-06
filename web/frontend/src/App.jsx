@@ -8,10 +8,12 @@ import StructuralFlags from './components/StructuralFlags'
 import LoadingCountdown from './components/LoadingCountdown'
 import FdaResponse from './components/FdaResponse'
 import WebSearchSummary from './components/WebSearchSummary'
+import DetailedAnalysisReport from './components/DetailedAnalysisReport'
 
 export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('alphaforge_api_key') || '')
   const [result, setResult] = useState(null)
+  const [detailedReport, setDetailedReport] = useState(null)
   const [loading, setLoading] = useState(false)
   const [isQueued, setIsQueued] = useState(false)
   const [isPrinting, setIsPrinting] = useState(false)
@@ -24,6 +26,36 @@ export default function App() {
       window.print()
       setIsPrinting(false)
     }, 200)
+  }
+
+  async function handleDetailedAnalysis(formData) {
+    setLoading(true)
+    setIsQueued(true)
+    setError(null)
+    setDetailedReport(null)
+
+    try {
+      const res = await fetch('/api/detailed-analysis', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Detailed analysis failed')
+      }
+
+      const data = await res.json()
+      setDetailedReport(data)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Polling for queue state while loading
@@ -115,11 +147,15 @@ export default function App() {
           </a>
         </div>
 
-        <InputForm onSubmit={handleSubmit} loading={loading} />
+        <InputForm onSubmit={handleSubmit} onDetailedAnalysis={handleDetailedAnalysis} loading={loading} />
 
         {loading && <LoadingCountdown isQueued={isQueued} />}
 
         {error && <div className="error-msg">{error}</div>}
+
+        {detailedReport && (
+          <DetailedAnalysisReport report={detailedReport} onBack={() => setDetailedReport(null)} />
+        )}
 
         {result && (
           <div ref={resultsRef}>
