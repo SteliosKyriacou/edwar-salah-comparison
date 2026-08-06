@@ -1094,11 +1094,6 @@ async def detailed_analysis(req: AnalyzeRequest, request: Request):
     log_visit(ip, f"/api/detailed-analysis?owner={key_info['owner']}", ua)
     log_prediction(results[0])
 
-    try:
-        results = await asyncio.gather(*(sem_eval() for _ in range(100)))
-    except Exception as e:
-        raise HTTPException(500, f"Analysis pipeline error: {str(e)}")
-
     # Aggregate metrics across the 100 simultaneous runs
     tcsp_list = [r["overview"]["tcsp"] for r in results]
     p1_list = [r["overview"]["final_p1"] for r in results]
