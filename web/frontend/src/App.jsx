@@ -780,8 +780,9 @@ function UsagePage() {
       return rt > rateWindowStart && rt <= pointTime;
     }).length;
 
+    const effectiveRuns = Math.max(runsInRateWindow, activeQueueAtPoint > 0 ? activeQueueAtPoint / 2 : 0);
     const rateWindowMin = rateWindowMs / 60000;
-    const rateRowsPerMin = parseFloat((runsInRateWindow / rateWindowMin).toFixed(1));
+    const rateRowsPerMin = parseFloat((effectiveRuns / rateWindowMin).toFixed(1));
 
     const hours = pointTime.getHours().toString().padStart(2, '0');
     const minutes = pointTime.getMinutes().toString().padStart(2, '0');
@@ -795,7 +796,11 @@ function UsagePage() {
     });
   }
 
-  const currentRate = zoomMinutes > 0 ? (filteredRuns.length / zoomMinutes).toFixed(1) : '0.0';
+  const recentRuns = runs.filter(run => {
+    const rt = parseUtcDate(run.timestamp);
+    return (now.getTime() - rt.getTime()) <= 300000; // last 5 minutes
+  }).length;
+  const currentRate = recentRuns > 0 ? (recentRuns / 5).toFixed(1) : (activeQueueCount > 0 ? (activeQueueCount / 1.5).toFixed(1) : '0.0');
 
   let etaText = '--';
   if (activeQueueCount > 0) {
