@@ -405,7 +405,6 @@ function UsagePage() {
   const [runs, setRuns] = useState([])
   const [snapshots, setSnapshots] = useState([])
   const [zoomMinutes, setZoomMinutes] = useState(60)
-  const [targetLimit, setTargetLimit] = useState(3)
 
   async function fetchMonitoring() {
     if (!apiKey.trim()) return
@@ -753,19 +752,18 @@ function UsagePage() {
   const currentRate = zoomMinutes > 0 ? (filteredRuns.length / zoomMinutes).toFixed(1) : '0.0';
 
   let etaText = '--';
-  const remaining = targetLimit - filteredRuns.length;
-  if (remaining <= 0) {
-    etaText = 'Completed';
-  } else {
+  if (activeQueueCount > 0) {
     const rateVal = parseFloat(currentRate);
     if (rateVal > 0) {
-      const etaMin = remaining / rateVal;
+      const etaMin = activeQueueCount / rateVal;
       if (etaMin < 1) {
         etaText = `${Math.ceil(etaMin * 60)}s`;
       } else {
         etaText = `${etaMin.toFixed(1)} min`;
       }
     }
+  } else {
+    etaText = 'Completed';
   }
 
   // Chart coordinate helpers
@@ -896,9 +894,9 @@ function UsagePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: 20, borderRadius: 6, textAlign: 'center' }}>
                 <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
-                  {activeQueueCount} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>/</span> {targetLimit}
+                  {activeQueueCount}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>PROGRESS</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>ACTIVE JOBS</div>
               </div>
               
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: 20, borderRadius: 6, textAlign: 'center' }}>
@@ -1090,30 +1088,6 @@ function UsagePage() {
                     })}
                   </div>
                 </div>
-
-                <div style={{ minWidth: '150px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                    🎯 Target Goal (Denominator):
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={targetLimit}
-                    onChange={(e) => setTargetLimit(Math.max(1, parseInt(e.target.value) || 1))}
-                    style={{
-                      width: '100px',
-                      padding: '6px 10px',
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 4,
-                      color: '#fff',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      textAlign: 'center'
-                    }}
-                  />
-                </div>
               </div>
             </div>
 
@@ -1127,7 +1101,7 @@ function UsagePage() {
                   return (
                     <div key={run.id} style={{ padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                       <span style={{ color: '#8892b0' }}>
-                        [{formattedDate}] &mdash; <span style={{ color: 'var(--text-primary)' }}>Evaluated {globalIdx} / {targetLimit} molecules</span>
+                        [{formattedDate}] &mdash; <span style={{ color: 'var(--text-primary)' }}>Completed evaluation #{globalIdx}</span>
                       </span>
                       <span style={{ color: 'var(--accent-blue)', fontSize: '0.75rem', opacity: 0.8 }}>
                         {run.username || run.owner} ({run.target})
