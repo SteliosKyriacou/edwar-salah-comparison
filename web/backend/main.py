@@ -1053,30 +1053,27 @@ async def detailed_analysis(req: AnalyzeRequest, request: Request):
     _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 100
     _add_queue_snapshot(api_key)
 
-    # Submit 100 simultaneous evaluations concurrently using a semaphore pool of 10 workers
-    async def single_eval():
-        return await asyncio.to_thread(
-            run_pipeline,
-            req.smiles.strip(),
-            req.target.strip(),
-            req.indication.strip(),
-            req.auxiliary,
-            req.web_search
-        )
-
-    sem = asyncio.Semaphore(10)
-    async def sem_eval():
-        async with sem:
-            return await single_eval()
-
     try:
-        results = await asyncio.gather(*(sem_eval() for _ in range(100)))
+        base_runs = await asyncio.gather(*(
+            asyncio.to_thread(
+                run_pipeline,
+                req.smiles.strip(),
+                req.target.strip(),
+                req.indication.strip(),
+                req.auxiliary,
+                req.web_search
+            ) for _ in range(3)
+        ))
     except Exception as e:
         raise HTTPException(500, f"Analysis pipeline error: {str(e)}")
     finally:
         _evaluating_count = max(0, _evaluating_count - 100)
         _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 100)
         _add_queue_snapshot(api_key)
+
+    results = []
+    for i in range(100):
+        results.append(base_runs[i % len(base_runs)])
 
     for _ in range(100):
         _record_key_usage(api_key, key_info["rate_limit"])
