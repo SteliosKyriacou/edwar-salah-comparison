@@ -1047,9 +1047,9 @@ async def detailed_analysis(req: AnalyzeRequest, request: Request):
     if not req.indication.strip():
         raise HTTPException(400, "Indication is required")
 
-    # Run base pipeline to get real agent insights
-    try:
-        base_res = await asyncio.to_thread(
+    # Submit 100 simultaneous evaluations concurrently using a semaphore pool of 10 workers
+    async def single_eval():
+        return await asyncio.to_thread(
             run_pipeline,
             req.smiles.strip(),
             req.target.strip(),
@@ -1057,47 +1057,81 @@ async def detailed_analysis(req: AnalyzeRequest, request: Request):
             req.auxiliary,
             req.web_search
         )
+
+    sem = asyncio.Semaphore(10)
+    async def sem_eval():
+        async with sem:
+            return await single_eval()
+
+    try:
+        results = await asyncio.gather(*(sem_eval() for _ in range(100)))
     except Exception as e:
         raise HTTPException(500, f"Analysis pipeline error: {str(e)}")
 
+    # Aggregate metrics across the 100 simultaneous runs
+    tcsp_list = [r["overview"]["tcsp"] for r in results]
+    p1_list = [r["overview"]["final_p1"] for r in results]
+    p2_list = [r["overview"]["final_p2"] for r in results]
+    p3_list = [r["overview"]["final_p3"] for r in results]
+
+    avg_tcsp = sum(tcsp_list) / len(tcsp_list)
+    avg_p1 = sum(p1_list) / len(p1_list)
+    avg_p2 = sum(p2_list) / len(p2_list)
+    avg_p3 = sum(p3_list) / len(p3_list)
+
+    # High score means high risk / low probability of success (Risk Score = round((1 - TCSP) * 100))
+    risk_score = round((1.0 - avg_tcsp) * 100)
+    risk_score = max(1, min(99, risk_score))
+
+    verdict = "PROCEED" if risk_score <= 40 else ("CAUTION" if risk_score <= 75 else "TERMINATE")
+
+    base_res = results[0]
     ov = base_res.get("overview", {})
     bio = base_res.get("biology", {})
     tox = base_res.get("toxicology", {})
     pharma = base_res.get("pharmacology", {})
-    medchem = base_res.get("medchem", {})
 
-    score = ov.get("medchem_score", 12)
-    
-    # Synthesize ReneuBio Due Diligence Memo Report structure
+    bio_v = bio.get("verdict", "ELITE" if avg_p2 > 0.4 else "TERMINATE")
+    tox_v = tox.get("toxi_verdict", "CLEAN" if risk_score <= 40 else ("MANAGEABLE" if risk_score <= 75 else "TOXIC"))
+    pharma_v = pharma.get("pharma_verdict", "FAVORABLE" if risk_score <= 40 else ("ADEQUATE" if risk_score <= 75 else "IMPRACTICAL"))
+
+    if verdict == "PROCEED":
+        exec_summary = f"Across 100 simultaneous Monte Carlo ensemble evaluations, {req.smiles.strip()} demonstrates a highly favorable clinical risk profile (Risk Score: {risk_score}/100) targeting {req.target.strip()} for {req.indication.strip()}. The asset exhibits robust target engagement, favorable early developability (Phase 1 P: {avg_p1:.2f}), strong translational likelihood (Phase 2 P: {avg_p2:.2f}), and durable clinical utility (Phase 3 P: {avg_p3:.2f}). Safety and pharmacokinetic properties are well within acceptable clinical thresholds."
+    elif verdict == "CAUTION":
+        exec_summary = f"Across 100 simultaneous Monte Carlo ensemble evaluations, {req.smiles.strip()} targeting {req.target.strip()} for {req.indication.strip()} yields a moderate-to-high risk score of {risk_score}/100. While early phase developability (Phase 1 P: {avg_p1:.2f}) shows viable physicochemical properties, translational probability (Phase 2 P: {avg_p2:.2f}) and chronic safety or target validation present notable concerns requiring targeted risk mitigation."
+    else:
+        exec_summary = f"Across 100 simultaneous Monte Carlo ensemble evaluations, {req.smiles.strip()} targeting {req.target.strip()} for {req.indication.strip()} receives a critical risk score of {risk_score}/100. Ensemble consensus points to severe structural liabilities, high predicted toxicity, unfavorable target biology, or insurmountable pharmacokinetic hurdles (Phase 1 P: {avg_p1:.2f}, Phase 2 P: {avg_p2:.2f}, Phase 3 P: {avg_p3:.2f}). Clinical attrition risk is exceptionally high."
+
+    # Synthesize ReneuBio Due Diligence Memo Report structure dynamically and consistently
     report = {
         "asset": req.smiles.strip()[:40] + ("..." if len(req.smiles.strip()) > 40 else ""),
         "target": req.target.strip(),
         "indication": req.indication.strip(),
-        "riskScore": score,
-        "verdict": "PROCEED" if score <= 40 else ("CAUTION" if score <= 70 else "TERMINATE"),
-        "executiveSummary": f"This 100x Monte Carlo ensemble evaluation assesses {req.smiles.strip()} against {req.target.strip()} for {req.indication.strip()}. The principal score of {score}/100 reflects favorable intrinsic target engagement, robust translational potential, and manageable safety profiles. Across 100 concurrent ensemble iterations, consensus agreement remains high on target validity and preliminary clinical rationale.",
+        "riskScore": risk_score,
+        "verdict": verdict,
+        "executiveSummary": exec_summary,
         "scorecard": [
-            { "metric": "Risk score", "value": f"{score} / 100", "interpretation": "Very low intrinsic molecule–indication risk", "readout": "Supports continued diligence with a high probability of success" },
-            { "metric": "Phase 1", "value": "FAVORABLE", "interpretation": "High early developability", "readout": "Consistent with established pharmacological benchmarks and safety" },
-            { "metric": "Phase 2", "value": "MODERATE", "interpretation": "Moderately high translational probability", "readout": "Supported by meaningful target engagement and clinical signal" },
-            { "metric": "Phase 3", "value": "FAVORABLE", "interpretation": "Favorable but conditional", "readout": "Success depends on differentiation across patient subgroups" },
-            { "metric": "Therapeutic window", "value": "MODERATE", "interpretation": "Workable, but requires dose optimization", "readout": "Maintenance of adequate exposure despite dose management is central." },
-            { "metric": "Biology verdict", "value": bio.get("verdict", "ELITE"), "interpretation": "Validated oncogenic or therapeutic driver", "readout": "The asset’s clearest underlying strength" },
-            { "metric": "Toxicology verdict", "value": tox.get("toxi_verdict", "MANAGEABLE"), "interpretation": "Recognized and monitorable class liabilities", "readout": "Requires focused safety and monitoring protocols" },
-            { "metric": "Pharmacology verdict", "value": pharma.get("pharma_verdict", "FAVORABLE"), "interpretation": "Sustained target engagement and exposure", "readout": "Supports efficacy, although high-dose exposure management is relevant" },
-            { "metric": "Medicinal Chemistry", "value": "CREDIBLE", "interpretation": "Rational design with documented structural alerts", "readout": "Alerts are precedented and manageable in clinical development" }
+            { "metric": "Risk score", "value": f"{risk_score} / 100", "interpretation": "High score indicates high clinical attrition risk" if risk_score > 40 else "Low intrinsic molecule-indication risk", "readout": "High probability of clinical failure" if risk_score > 75 else ("Requires conditional risk mitigation" if risk_score > 40 else "Supports continued diligence with high probability of success") },
+            { "metric": "Phase 1", "value": "FAVORABLE" if avg_p1 >= 0.5 else "CHALLENGING", "interpretation": f"Early developability success prob: {avg_p1:.0%}", "readout": "Consistent with established pharmacological benchmarks" if avg_p1 >= 0.5 else "Significant early attrition liability" },
+            { "metric": "Phase 2", "value": "MODERATE" if avg_p2 >= 0.25 else "LOW", "interpretation": f"Translational success prob: {avg_p2:.0%}", "readout": "Supported by meaningful target engagement" if avg_p2 >= 0.25 else "Uncertain clinical signal in target indication" },
+            { "metric": "Phase 3", "value": "FAVORABLE" if avg_p3 >= 0.5 else "CONDITIONAL", "interpretation": f"Approval success prob: {avg_p3:.0%}", "readout": "Favorable approval outlook" if avg_p3 >= 0.5 else "High hurdle for superiority against standards of care" },
+            { "metric": "Therapeutic window", "value": "WORKABLE" if risk_score <= 60 else "NARROW", "interpretation": "Separation of efficacy from toxicity", "readout": "Dose optimization is central to management." },
+            { "metric": "Biology verdict", "value": bio_v, "interpretation": bio.get("mechanism_validation", "Target validation assessment"), "readout": bio.get("biological_rationale", "Core biological rationale evaluated across 100 runs.")[:120] },
+            { "metric": "Toxicology verdict", "value": tox_v, "interpretation": tox.get("primary_tox_concern", "On/off-target safety liability"), "readout": tox.get("toxi_rationale", "Toxicology assessment evaluated across 100 runs.")[:120] },
+            { "metric": "Pharmacology verdict", "value": pharma_v, "interpretation": pharma.get("oral_feasibility", "ADME and PK profile"), "readout": pharma.get("pharma_rationale", "Pharmacology assessment evaluated across 100 runs.")[:120] },
+            { "metric": "Medicinal Chemistry", "value": "CREDIBLE" if risk_score <= 75 else "HIGH-RISK", "interpretation": ov.get("metabolic_stability", "Structural liabilities assessment"), "readout": ov.get("structural_assessment", "MedChem assessment evaluated across 100 runs.")[:120] }
         ],
         "domainExpertise": [
-            { "domain": "Biological Rationalist Assessment", "verdict": bio.get("verdict", "ELITE"), "rationale": bio.get("biological_rationale", "Strong mechanistic alignment and target validation.") },
-            { "domain": "Predictive Toxicology Assessment", "verdict": tox.get("toxi_verdict", "MANAGEABLE"), "rationale": tox.get("toxi_rationale", "Monitorable on-target and off-target safety profile.") },
-            { "domain": "Clinical Pharmacology Assessment", "verdict": pharma.get("pharma_verdict", "FAVORABLE"), "rationale": pharma.get("pharma_rationale", "Favorable ADME and target compartment exposure.") },
-            { "domain": "Medicinal Chemistry Assessment", "verdict": "CREDIBLE", "rationale": ov.get("structural_assessment", "Rational structural design with acceptable developability.") }
+            { "domain": "Biological Rationalist Assessment", "verdict": bio_v, "rationale": bio.get("biological_rationale", "Target biology and pathway rationale.") },
+            { "domain": "Predictive Toxicology Assessment", "verdict": tox_v, "rationale": tox.get("toxi_rationale", "Safety liabilities and toxicity profile.") },
+            { "domain": "Clinical Pharmacology Assessment", "verdict": pharma_v, "rationale": pharma.get("pharma_rationale", "PK/PD feasibility and target compartment exposure.") },
+            { "domain": "Medicinal Chemistry Assessment", "verdict": "CREDIBLE" if risk_score <= 75 else "HIGH-RISK", "rationale": ov.get("structural_assessment", "Structural assessment and MPO profile.") }
         ],
         "riskSignals": [
-            { "concern": "On-Target Exposure Liability", "confidence": "High", "interpretation": "Dominant exposure-related molecular liability", "whyItMatters": "May limit optimal dose titration if sustained chronically." },
-            { "concern": "Comparative Efficacy & Heterogeneity", "confidence": "High", "interpretation": "Principal Phase 3 clinical risk", "whyItMatters": "Must demonstrate superiority across diverse patient subgroups." },
-            { "concern": "Hepatic / Metabolic Clearance", "confidence": "Moderate", "interpretation": "Consistent tolerability signal", "whyItMatters": "Requires routine monitoring and potential dose adjustments." },
-            { "concern": "Off-Target Structural Alerts", "confidence": "Low", "interpretation": "Secondary class-based hypothesis", "whyItMatters": "Appropriate to investigate but not a primary failure driver." }
+            { "concern": "Intrinsic Structural / PTM Liability", "confidence": "High" if risk_score > 60 else "Low", "interpretation": "Evaluated across 100 simultaneous ensemble iterations", "whyItMatters": "Determines developability, stability, and clearance kinetics." },
+            { "concern": "On-Target Toxicity & Window", "confidence": "High" if risk_score > 50 else "Moderate", "interpretation": "Mechanistic separation of efficacy and safety", "whyItMatters": "Limits maximum tolerated dose and chronic dosing duration." },
+            { "concern": "Pharmacokinetic / ADME Risk", "confidence": "Moderate", "interpretation": "Systemic exposure and target compartment penetration", "whyItMatters": "Dictates dosing frequency and therapeutic maintenance." },
+            { "concern": "Comparative Clinical Efficacy", "confidence": "High" if risk_score > 40 else "Low", "interpretation": "Probability of superiority in pivotal trials", "whyItMatters": "Pivotal driver of Phase 3 approval success." }
         ],
         "timestamp": datetime.utcnow().strftime('%B %d, %Y')
     }
