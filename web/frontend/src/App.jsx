@@ -12,13 +12,39 @@ import DetailedAnalysisReport from './components/DetailedAnalysisReport'
 
 export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('alphaforge_api_key') || '')
-  const [result, setResult] = useState(null)
-  const [detailedReport, setDetailedReport] = useState(null)
+  const [result, setResult] = useState(() => {
+    try {
+      const saved = localStorage.getItem('alphaforge_last_result')
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  })
+  const [detailedReport, setDetailedReport] = useState(() => {
+    try {
+      const saved = localStorage.getItem('alphaforge_last_report')
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  })
   const [loading, setLoading] = useState(false)
   const [isQueued, setIsQueued] = useState(false)
   const [isPrinting, setIsPrinting] = useState(false)
   const [error, setError] = useState(null)
   const resultsRef = useRef(null)
+
+  useEffect(() => {
+    if (result) {
+      localStorage.setItem('alphaforge_last_result', JSON.stringify(result))
+    }
+  }, [result])
+
+  useEffect(() => {
+    if (detailedReport) {
+      localStorage.setItem('alphaforge_last_report', JSON.stringify(detailedReport))
+    }
+  }, [detailedReport])
 
   function handlePrint() {
     setIsPrinting(true)
@@ -51,6 +77,7 @@ export default function App() {
 
       const data = await res.json()
       setDetailedReport(data)
+      localStorage.setItem('alphaforge_last_report', JSON.stringify(data))
     } catch (e) {
       setError(e.message)
     } finally {
@@ -114,6 +141,7 @@ export default function App() {
 
       const data = await res.json()
       setResult(data)
+      localStorage.setItem('alphaforge_last_result', JSON.stringify(data))
 
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
