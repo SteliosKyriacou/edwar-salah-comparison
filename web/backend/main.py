@@ -1036,6 +1036,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
 
 @app.post("/api/detailed-analysis")
 async def detailed_analysis(req: AnalyzeRequest, request: Request):
+    global _evaluating_count, _queued_count
     # Authenticate via API Key
     key_info = _authenticate_and_rate_limit(request)
     ip = _get_client_ip(request)
@@ -1046,6 +1047,11 @@ async def detailed_analysis(req: AnalyzeRequest, request: Request):
         raise HTTPException(400, "Target is required")
     if not req.indication.strip():
         raise HTTPException(400, "Indication is required")
+
+    api_key = key_info["key"]
+    _evaluating_count += 100
+    _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 100
+    _add_queue_snapshot(api_key)
 
     # Submit 100 simultaneous evaluations concurrently using a semaphore pool of 10 workers
     async def single_eval():
@@ -1062,6 +1068,34 @@ async def detailed_analysis(req: AnalyzeRequest, request: Request):
     async def sem_eval():
         async with sem:
             return await single_eval()
+
+    try:
+        results = await asyncio.gather(*(sem_eval() for _ in range(100)))
+    except Exception as e:
+        raise HTTPException(500, f"Analysis pipeline error: {str(e)}")
+    finally:
+        _evaluating_count = max(0, _evaluating_count - 100)
+        _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 100)
+        _add_queue_snapshot(api_key)
+
+    for _ in range(100):
+        _record_key_usage(api_key, key_info["rate_limit"])
+    _log_api_key_stats(
+        api_key,
+        req.smiles,
+        req.target,
+        req.indication,
+        owner=key_info["owner"],
+        tsa_fingerprint=results[0].get("tsa_fingerprint"),
+        tsa_timestamp=results[0].get("tsa_timestamp"),
+        tsa_signature_b64=results[0].get("tsa_signature_b64"),
+        tsa_manifest=results[0].get("tsa_manifest"),
+        prediction_json=results[0]
+    )
+
+    ua = request.headers.get("user-agent", "")
+    log_visit(ip, f"/api/detailed-analysis?owner={key_info['owner']}", ua)
+    log_prediction(results[0])
 
     try:
         results = await asyncio.gather(*(sem_eval() for _ in range(100)))
