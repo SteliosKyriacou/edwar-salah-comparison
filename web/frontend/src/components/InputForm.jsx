@@ -13,6 +13,24 @@ const EXAMPLES = [
     target: 'g-Secretase inhibitor',
     indication: 'CNS',
   },
+  {
+    label: 'Firmonertinib (EGFR PACC)',
+    smiles: 'COc1cc2c(nc(n1)Nc3cc(c(cc3Cl)NC(=O)C=C)N(C)CCN(C)C)nc4cc(ccc42)N5CCOCC5',
+    target: 'Covalent EGFR inhibitor',
+    indication: 'First-line EGFR PACC-mutant NSCLC',
+  },
+  {
+    label: 'Antibody Success (Trastuzumab)',
+    smiles: '[Monoclonal Antibody: Trastuzumab (Anti-HER2 IgG1)] Heavy chain: EVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSS... Light chain: DIQMTQSPSSLSASVGDRVTITCRASQDVNTAVAWYQQKPGKAPKLLIYSASFLYSGVPSRFSGSRSGTDFTLTISSLQPEDFATYYCQQHYTTPPTFGQGTKVEIKR...',
+    target: 'HER2 Receptor',
+    indication: 'Oncology (Breast Cancer)',
+  },
+  {
+    label: 'Antibody Failure (Bapineuzumab)',
+    smiles: '[Monoclonal Antibody: Bapineuzumab (Anti-Amyloid-beta IgG1)] Heavy chain: EVQLVESGGGLVQPGGSLRLSCAASGFTFSDHYMSWVRQAPGKGLEWVAYISSGGGSTYYPDTVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARYGNYVWYFDVWGQGTLVTVSS... Light chain: DIQMTQSPSSLSASVGDRVTITCRASQSISSYLNWYQQKPGKAPKLLIYAASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQSYSTPYTFGQGTKVEIKR...',
+    target: 'Amyloid-beta',
+    indication: 'Neurology (Alzheimer\'s Disease)',
+  },
 ]
 
 export default function InputForm({ onSubmit, onDetailedAnalysis, loading }) {
