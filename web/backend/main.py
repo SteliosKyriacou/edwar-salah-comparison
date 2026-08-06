@@ -123,6 +123,21 @@ _queued_count = 0
 _key_evaluating_counts = {}  # { api_key: count }
 _key_queued_counts = {}      # { api_key: count }
 
+_queue_snapshots = []  # list of { timestamp, api_key, evaluating, queued, global_evaluating, global_queued }
+
+def _add_queue_snapshot(api_key: str):
+    _queue_snapshots.append({
+        "timestamp": datetime.utcnow().isoformat(),
+        "api_key": api_key,
+        "evaluating": _key_evaluating_counts.get(api_key, 0),
+        "queued": _key_queued_counts.get(api_key, 0),
+        "global_evaluating": _evaluating_count,
+        "global_queued": _queued_count
+    })
+    # Limit to last 2000 entries to prevent memory growth
+    if len(_queue_snapshots) > 2000:
+        _queue_snapshots.pop(0)
+
 
 def _authenticate_and_rate_limit(request: Request) -> dict:
     """Authenticate request using X-API-Key header or query parameter.
@@ -567,6 +582,8 @@ def get_usage(request: Request):
         "admin": is_admin,
         "evaluating_now": _key_evaluating_counts.get(api_key, 0),
         "queued_now": _key_queued_counts.get(api_key, 0),
+        "global_evaluating_now": _evaluating_count,
+        "global_queued_now": _queued_count,
         "stats": stats
     }
 
@@ -865,7 +882,13 @@ def get_monitoring_data(request: Request, mode: str = "mine"):
                 "indication": row[5],
                 "tsa_fingerprint": row[6]
             })
-        return {"runs": runs}
+        # Filter queue snapshots
+        if mode == "mine":
+            filtered_snaps = [s for s in _queue_snapshots if s["api_key"] == api_key]
+        else:
+            filtered_snaps = _queue_snapshots
+
+        return {"runs": runs, "snapshots": filtered_snaps}
     except Exception as e:
         raise HTTPException(500, f"Database error: {e}")
     finally:
@@ -901,6 +924,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
     api_key = key_info["key"]
     _queued_count += 1
     _key_queued_counts[api_key] = _key_queued_counts.get(api_key, 0) + 1
+    _add_queue_snapshot(api_key)
     
     queued_decremented = False
     evaluating_incremented = False
@@ -914,6 +938,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
             _evaluating_count += 1
             _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 1
             evaluating_incremented = True
+            _add_queue_snapshot(api_key)
             
             if req.mock:
                 # Simulate a 5-second analysis
@@ -951,6 +976,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
         if evaluating_incremented:
             _evaluating_count -= 1
             _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 1)
+        _add_queue_snapshot(api_key)
 
     # Build secure plain-text manifest file content (fully detailed, including all verdicts/rationales!)
     ts_str = datetime.utcnow().isoformat()

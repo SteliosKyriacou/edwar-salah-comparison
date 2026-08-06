@@ -403,6 +403,7 @@ function UsagePage() {
   // Real-time Monitoring Section state
   const [mode, setMode] = useState('mine')
   const [runs, setRuns] = useState([])
+  const [snapshots, setSnapshots] = useState([])
   const [zoomMinutes, setZoomMinutes] = useState(60)
   const [targetLimit, setTargetLimit] = useState(3)
 
@@ -413,6 +414,7 @@ function UsagePage() {
       if (res.ok) {
         const data = await res.json()
         setRuns(data.runs || [])
+        setSnapshots(data.snapshots || [])
       }
     } catch (e) {
       // ignore
@@ -676,8 +678,15 @@ function UsagePage() {
   for (let i = 0; i < numPoints; i++) {
     const pointTime = new Date(cutoffTime.getTime() + i * intervalMs);
 
-    // Cumulative count of runs up to pointTime
-    const cumulativeRuns = runs.filter((run) => new Date(run.timestamp) <= pointTime).length;
+    // Calculate active queue count (evaluating + queued) at pointTime from snapshots
+    const pointSnapshots = snapshots.filter((s) => new Date(s.timestamp) <= pointTime);
+    let activeQueueAtPoint = 0;
+    if (pointSnapshots.length > 0) {
+      const latestSnap = pointSnapshots[pointSnapshots.length - 1];
+      activeQueueAtPoint = mode === 'mine'
+        ? ((latestSnap.evaluating ?? 0) + (latestSnap.queued ?? 0))
+        : ((latestSnap.global_evaluating ?? 0) + (latestSnap.global_queued ?? 0));
+    }
 
     // Local Rate (Rows/Min) calculation in a sliding window
     const rateWindowMs = Math.max(60000, intervalMs); // Minimum 1 minute window
@@ -697,12 +706,18 @@ function UsagePage() {
     chartData.push({
       time: pointTime,
       label,
-      cumulative: cumulativeRuns,
+      cumulative: activeQueueAtPoint, // mapped to cumulative for easy coordinate reuse
       rate: rateRowsPerMin,
     });
   }
 
   // Calculated Metrics
+  const activeQueueCount = info
+    ? (mode === 'mine' 
+       ? ((info.evaluating_now ?? 0) + (info.queued_now ?? 0))
+       : ((info.global_evaluating_now ?? 0) + (info.global_queued_now ?? 0)))
+    : 0;
+
   const currentRate = zoomMinutes > 0 ? (filteredRuns.length / zoomMinutes).toFixed(1) : '0.0';
 
   let etaText = '--';
@@ -849,7 +864,7 @@ function UsagePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: 20, borderRadius: 6, textAlign: 'center' }}>
                 <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
-                  {filteredRuns.length} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>/</span> {targetLimit}
+                  {activeQueueCount} <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>/</span> {targetLimit}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>PROGRESS</div>
               </div>
@@ -873,7 +888,7 @@ function UsagePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }} className="usage-grid">
               {/* Progress Chart */}
               <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', padding: 16, borderRadius: 6 }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: 12 }}>Progress</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: 12 }}>Active Queue (Evaluating + Queued)</div>
                 <svg viewBox="0 0 500 220" style={{ width: '100%', height: 'auto', display: 'block' }}>
                   <defs>
                     <linearGradient id="progressGrad" x1="0" y1="0" x2="0" y2="1">
