@@ -693,12 +693,22 @@ function UsagePage() {
   const intervalMs = (zoomMinutes * 60 * 1000) / (numPoints - 1);
   const chartData = [];
 
-  // Current live active count
-  const activeQueueCount = info
-    ? (mode === 'mine' 
-       ? ((info.evaluating_now ?? 0) + (info.queued_now ?? 0))
-       : ((info.global_evaluating_now ?? 0) + (info.global_queued_now ?? 0)))
-    : 0;
+  // Current live active count (updating in real-time from the latest polled snapshots)
+  const getActiveQueueCount = () => {
+    if (snapshots.length > 0) {
+      const latestSnap = snapshots[snapshots.length - 1];
+      return mode === 'mine'
+        ? ((latestSnap.evaluating ?? 0) + (latestSnap.queued ?? 0))
+        : ((latestSnap.global_evaluating ?? 0) + (latestSnap.global_queued ?? 0));
+    }
+    return info
+      ? (mode === 'mine' 
+         ? ((info.evaluating_now ?? 0) + (info.queued_now ?? 0))
+         : ((info.global_evaluating_now ?? 0) + (info.global_queued_now ?? 0)))
+      : 0;
+  };
+
+  const activeQueueCount = getActiveQueueCount();
 
   for (let i = 0; i < numPoints; i++) {
     const pointTime = new Date(cutoffTime.getTime() + i * intervalMs);
