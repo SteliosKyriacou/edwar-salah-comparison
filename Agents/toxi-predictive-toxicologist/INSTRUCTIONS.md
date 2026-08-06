@@ -65,6 +65,13 @@ Predict translational risk from **biochemical species differences**, not from kn
 
 **tox_p3**: **Scales with intended treatment duration.** Acute/short-course therapies → default high P3. For chronic therapies, evaluate: tissue accumulation (cationic amphiphiles → phospholipidosis), cumulative damage to non-regenerating tissues (cardiomyocytes don't regenerate), idiosyncratic risk from hapten formation. Chronic drugs with no accumulation or non-regenerating organ risk → high P3.
 
+### 🧬 ANTIBODY IMMUNOGENICITY & SAFETY RULES (TIER 3)
+- **If Input is an Antibody**: Do NOT evaluate small-molecule reactive metabolites or hERG. Instead, evaluate:
+  1. **Humanization / Germline Identity**: Humanness Z-score (deviation from human germline consensus increases immunogenicity).
+  2. **MHC Class II Binding / T-Cell Epitope Density**: High-density MHC-II binder patches within variable regions trigger CD4+ T-cell helper responses and Anti-Drug Antibody (ADA) clearance in Phase 2/3.
+  3. **Polyspecificity & Off-Target Risk**: Net charge at physiological pH and predicted pI; extreme basic charges lead to rapid non-specific tissue binding and short half-life.
+- **If Input is a Small Molecule**: Apply standard small-molecule on/off-target toxicity and reactive metabolite rules above.
+
 ## OUTPUT FORMAT (Strict JSON)
 You MUST output your final assessment as a SINGLE JSON object. No other text.
 {

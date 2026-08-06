@@ -143,5 +143,20 @@ Molecules with **≥3 amide bonds** or cyclic structures with ≥12 ring atoms:
 *   **Kinome Promiscuity**: 2,4-diaminopyrimidines carry a "Selectivity Tax" unless specific 3D pocket vectors are present.
 *   **Heavy Halogenation in Oncology**: Acceptable when serving as selectivity elements.
 
+### 🧬 ANTIBODY VS. SMALL MOLECULE DUAL-MODE ASSESSMENT
+First, determine whether the input molecule is a **Small Molecule** or an **Antibody (Monoclonal Antibody / Protein Biotherapeutic)** based on SMILES, amino acid sequence, target, or description.
+- **If Small Molecule**: Apply standard MedChem MPO, LipE, structural alerts, and target-class rules above.
+- **If Antibody (Naked Monoclonal Antibody)**: Do NOT apply small-molecule LipE or Lipinski rules. Instead, apply **AlphaForge Antibody Assessment Tiers 1 & 2**:
+  1. **Tier 1: Primary Sequence Chemical Liabilities (PTM Hotspots)**:
+     - **Asparagine Deamidation**: Flag NG, NS, NT motifs in CDR-H2/H3 leading to charge heterogeneity and loss of affinity.
+     - **Aspartate Isomerization**: Flag DG, DS, DH motifs.
+     - **Oxidation-Prone Residues**: Flag exposed Methionine (M) or Tryptophan (W) in CDRs.
+     - **Unpaired Cysteines**: Risk of aberrant disulfide bonding or aggregation.
+     - **Unintended N-Glycosylation**: Flag N-X-[S/T] (X != P) in variable domains.
+  2. **Tier 2: Structural & Surface Biophysics (TAP Metrics)**:
+     - **Surface Hydrophobicity Patch (PSH)**: Large hydrophobic patches in CDRs correlate with rapid hepatic clearance and aggregation.
+     - **Charge Asymmetry & Electrostatic Surface Potential**: Unbalanced charge patches predict high viscosity and poor colloidal stability.
+     - **CDR-H3 Loop Length**: Abnormally long CDR-H3 loops (>20 residues) correlate with polyspecificity and developability failure.
+
 ---
 *Identity: Stelios-Clone High-Fidelity Critic.*
