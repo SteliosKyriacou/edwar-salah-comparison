@@ -670,8 +670,13 @@ function UsagePage() {
 
   const getReferenceNow = () => {
     if (runs.length > 0) {
-      const timestamps = runs.map(r => parseUtcDate(r.timestamp).getTime());
-      return new Date(Math.max(...timestamps));
+      const validTimes = runs
+        .map(r => parseUtcDate(r.timestamp).getTime())
+        .filter(t => !isNaN(t));
+      if (validTimes.length > 0) {
+        const maxTime = validTimes.reduce((max, t) => Math.max(max, t), validTimes[0]);
+        return new Date(maxTime);
+      }
     }
     return new Date();
   };

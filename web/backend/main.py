@@ -876,12 +876,12 @@ def get_monitoring_data(request: Request, mode: str = "mine"):
     try:
         if mode == "mine":
             cursor = conn.execute(
-                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint, username FROM api_key_stats WHERE api_key = ? ORDER BY id ASC",
+                "SELECT id, timestamp, owner, target, username FROM api_key_stats WHERE api_key = ? ORDER BY id DESC LIMIT 2000",
                 (api_key,)
             )
         else:
             cursor = conn.execute(
-                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint, username FROM api_key_stats ORDER BY id ASC"
+                "SELECT id, timestamp, owner, target, username FROM api_key_stats ORDER BY id DESC LIMIT 2000"
             )
 
         runs = []
@@ -890,12 +890,10 @@ def get_monitoring_data(request: Request, mode: str = "mine"):
                 "id": row[0],
                 "timestamp": row[1],
                 "owner": row[2] or "Registered User",
-                "smiles": row[3],
-                "target": row[4],
-                "indication": row[5],
-                "tsa_fingerprint": row[6],
-                "username": row[7] or row[2] or "Ramil"
+                "target": row[3],
+                "username": row[4] or row[2] or "Ramil"
             })
+        runs.reverse() # Sort chronologically ascending for charts
         # Filter queue snapshots
         if mode == "mine":
             filtered_snaps = [s for s in _queue_snapshots if s["api_key"] == api_key]
