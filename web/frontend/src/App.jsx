@@ -1125,7 +1125,7 @@ function UsagePage() {
                         [{formattedDate}] &mdash; <span style={{ color: 'var(--text-primary)' }}>Evaluated {globalIdx} / {targetLimit} molecules</span>
                       </span>
                       <span style={{ color: 'var(--accent-blue)', fontSize: '0.75rem', opacity: 0.8 }}>
-                        {run.owner} ({run.target})
+                        {run.username || run.owner} ({run.target})
                       </span>
                     </div>
                   );

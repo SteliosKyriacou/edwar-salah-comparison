@@ -266,6 +266,7 @@ def _init_db():
                 timestamp TEXT NOT NULL,
                 api_key TEXT NOT NULL,
                 owner TEXT,
+                username TEXT,
                 smiles TEXT,
                 target TEXT,
                 indication TEXT,
@@ -276,6 +277,16 @@ def _init_db():
                 prediction_json TEXT
             );
         """)
+        # Ensure 'username' column exists on existing installations
+        try:
+            conn.execute("ALTER TABLE api_key_stats ADD COLUMN username TEXT;")
+        except sqlite3.OperationalError:
+            pass # already exists
+
+        # Assign all previous evaluations where username is null to owner, and fallback to 'Ramil'
+        conn.execute("UPDATE api_key_stats SET username = COALESCE(owner, 'Ramil') WHERE username IS NULL OR username = '';")
+        conn.execute("UPDATE api_key_stats SET username = 'Ramil' WHERE username = 'Unknown' OR username = 'Registered User';")
+
         # Create an index on the fingerprint for O(1) verification lookups
         conn.execute("CREATE INDEX IF NOT EXISTS idx_tsa_fingerprint ON api_key_stats(tsa_fingerprint);")
         # Create an index on api_key for fast stats queries
@@ -451,17 +462,19 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, 
     conn = _get_db_conn()
     try:
         pred_str = json.dumps(prediction_json) if prediction_json else None
+        username = owner if owner else "Ramil"
         conn.execute(
             """
             INSERT INTO api_key_stats (
-                timestamp, api_key, owner, smiles, target, indication, 
+                timestamp, api_key, owner, username, smiles, target, indication, 
                 tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.utcnow().isoformat(),
                 api_key,
                 owner,
+                username,
                 smiles.strip(),
                 target.strip(),
                 indication.strip(),
@@ -863,12 +876,12 @@ def get_monitoring_data(request: Request, mode: str = "mine"):
     try:
         if mode == "mine":
             cursor = conn.execute(
-                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint FROM api_key_stats WHERE api_key = ? ORDER BY id ASC",
+                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint, username FROM api_key_stats WHERE api_key = ? ORDER BY id ASC",
                 (api_key,)
             )
         else:
             cursor = conn.execute(
-                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint FROM api_key_stats ORDER BY id ASC"
+                "SELECT id, timestamp, owner, smiles, target, indication, tsa_fingerprint, username FROM api_key_stats ORDER BY id ASC"
             )
 
         runs = []
@@ -880,7 +893,8 @@ def get_monitoring_data(request: Request, mode: str = "mine"):
                 "smiles": row[3],
                 "target": row[4],
                 "indication": row[5],
-                "tsa_fingerprint": row[6]
+                "tsa_fingerprint": row[6],
+                "username": row[7] or row[2] or "Ramil"
             })
         # Filter queue snapshots
         if mode == "mine":
