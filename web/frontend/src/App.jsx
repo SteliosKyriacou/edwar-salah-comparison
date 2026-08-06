@@ -662,12 +662,18 @@ function UsagePage() {
   }, [])
 
   // Calculations for Monitoring charts & statistics
+  const parseUtcDate = (tsStr) => {
+    if (!tsStr) return new Date();
+    const clean = tsStr.endsWith('Z') ? tsStr : tsStr + 'Z';
+    return new Date(clean);
+  };
+
   const now = new Date();
   const cutoffTime = new Date(now.getTime() - zoomMinutes * 60 * 1000);
 
   // Filter runs within selected Zoom Time Window
   const filteredRuns = runs.filter((run) => {
-    const runTime = new Date(run.timestamp);
+    const runTime = parseUtcDate(run.timestamp);
     return runTime >= cutoffTime;
   });
 
@@ -675,24 +681,44 @@ function UsagePage() {
   const intervalMs = (zoomMinutes * 60 * 1000) / (numPoints - 1);
   const chartData = [];
 
+  // Current live active count
+  const activeQueueCount = info
+    ? (mode === 'mine' 
+       ? ((info.evaluating_now ?? 0) + (info.queued_now ?? 0))
+       : ((info.global_evaluating_now ?? 0) + (info.global_queued_now ?? 0)))
+    : 0;
+
   for (let i = 0; i < numPoints; i++) {
     const pointTime = new Date(cutoffTime.getTime() + i * intervalMs);
 
-    // Calculate active queue count (evaluating + queued) at pointTime from snapshots
-    const pointSnapshots = snapshots.filter((s) => new Date(s.timestamp) <= pointTime);
-    let activeQueueAtPoint = 0;
+    // 1. Reconstruct active runs from completed DB timestamps (90-second sliding completion window)
+    const activeRunsFromDb = runs.filter((run) => {
+      const rt = parseUtcDate(run.timestamp);
+      const diff = rt.getTime() - pointTime.getTime();
+      return diff > 0 && diff <= 90000; // 90 seconds in-flight estimation
+    }).length;
+
+    // 2. Also incorporate in-memory snapshots if available
+    const pointSnapshots = snapshots.filter((s) => parseUtcDate(s.timestamp) <= pointTime);
+    let activeQueueFromSnapshots = 0;
     if (pointSnapshots.length > 0) {
       const latestSnap = pointSnapshots[pointSnapshots.length - 1];
-      activeQueueAtPoint = mode === 'mine'
+      activeQueueFromSnapshots = mode === 'mine'
         ? ((latestSnap.evaluating ?? 0) + (latestSnap.queued ?? 0))
         : ((latestSnap.global_evaluating ?? 0) + (latestSnap.global_queued ?? 0));
+    }
+
+    // Blend: use the maximum or combine, and force current live value on the latest interval point
+    let activeQueueAtPoint = Math.max(activeRunsFromDb, activeQueueFromSnapshots);
+    if (i === numPoints - 1) {
+      activeQueueAtPoint = Math.max(activeQueueAtPoint, activeQueueCount);
     }
 
     // Local Rate (Rows/Min) calculation in a sliding window
     const rateWindowMs = Math.max(60000, intervalMs); // Minimum 1 minute window
     const rateWindowStart = new Date(pointTime.getTime() - rateWindowMs);
     const runsInRateWindow = runs.filter((run) => {
-      const rt = new Date(run.timestamp);
+      const rt = parseUtcDate(run.timestamp);
       return rt > rateWindowStart && rt <= pointTime;
     }).length;
 
@@ -710,13 +736,6 @@ function UsagePage() {
       rate: rateRowsPerMin,
     });
   }
-
-  // Calculated Metrics
-  const activeQueueCount = info
-    ? (mode === 'mine' 
-       ? ((info.evaluating_now ?? 0) + (info.queued_now ?? 0))
-       : ((info.global_evaluating_now ?? 0) + (info.global_queued_now ?? 0)))
-    : 0;
 
   const currentRate = zoomMinutes > 0 ? (filteredRuns.length / zoomMinutes).toFixed(1) : '0.0';
 
