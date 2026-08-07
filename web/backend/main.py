@@ -278,7 +278,9 @@ def _prime_rate_limiter_cache():
 
     conn = _get_db_conn()
     try:
-        cursor = conn.execute("SELECT api_key, timestamp FROM api_key_stats ORDER BY id ASC")
+        from datetime import datetime, timedelta
+        cutoff = (datetime.utcnow() - timedelta(hours=1)).isoformat()
+        cursor = conn.execute("SELECT api_key, timestamp FROM api_key_stats WHERE timestamp >= ? ORDER BY id ASC", (cutoff,))
         for api_key, ts_str in cursor:
             try:
                 dt = datetime.fromisoformat(ts_str)
