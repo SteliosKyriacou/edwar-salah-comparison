@@ -123,6 +123,21 @@ _queued_count = 0
 _key_evaluating_counts = {}  # { api_key: count }
 _key_queued_counts = {}      # { api_key: count }
 
+_queue_snapshots = []  # list of { timestamp, api_key, evaluating, queued, global_evaluating, global_queued }
+
+def _add_queue_snapshot(api_key: str):
+    _queue_snapshots.append({
+        "timestamp": datetime.utcnow().isoformat(),
+        "api_key": api_key,
+        "evaluating": _key_evaluating_counts.get(api_key, 0),
+        "queued": _key_queued_counts.get(api_key, 0),
+        "global_evaluating": _evaluating_count,
+        "global_queued": _queued_count
+    })
+    # Limit to last 2000 entries to prevent memory growth
+    if len(_queue_snapshots) > 2000:
+        _queue_snapshots.pop(0)
+
 
 def _authenticate_and_rate_limit(request: Request) -> dict:
     """Authenticate request using X-API-Key header or query parameter.
@@ -280,16 +295,21 @@ def _prime_rate_limiter_cache():
     try:
         from datetime import datetime, timedelta
         cutoff = (datetime.utcnow() - timedelta(hours=1)).isoformat()
-        cursor = conn.execute("SELECT api_key, timestamp FROM api_key_stats WHERE timestamp >= ? ORDER BY id ASC", (cutoff,))
-        for api_key, ts_str in cursor:
-            try:
-                dt = datetime.fromisoformat(ts_str)
-                epoch = dt.timestamp()
-                if api_key not in _key_usage_timestamps:
-                    _key_usage_timestamps[api_key] = []
-                _key_usage_timestamps[api_key].append(epoch)
-            except Exception:
-                pass
+        # Query the latest 5000 rows using indexed primary key (under 1ms, zero table scan!)
+        cursor = conn.execute("SELECT api_key, timestamp FROM api_key_stats ORDER BY id DESC LIMIT 5000")
+        rows = list(cursor)
+        rows.reverse() # Restore chronological ascending order
+
+        for api_key, ts_str in rows:
+            if ts_str >= cutoff:
+                try:
+                    dt = datetime.fromisoformat(ts_str)
+                    epoch = dt.timestamp()
+                    if api_key not in _key_usage_timestamps:
+                        _key_usage_timestamps[api_key] = []
+                    _key_usage_timestamps[api_key].append(epoch)
+                except Exception:
+                    pass
     except Exception:
         pass
     finally:
@@ -841,6 +861,62 @@ def verify_prediction(hash: str):
     raise HTTPException(404, "Evaluation not found. Please verify the SHA-256 fingerprint.")
 
 
+@app.get("/api/monitoring")
+def get_monitoring_data(request: Request, mode: str = "mine", zoom_minutes: int = 60):
+    # Authenticate via API Key to ensure they have a valid key
+    key_info = _authenticate_and_rate_limit(request)
+    api_key = key_info["key"]
+
+    if not os.path.exists(DB_FILE):
+        return {"runs": [], "snapshots": []}
+
+    # Calculate cutoff time in UTC
+    from datetime import datetime, timedelta
+    cutoff = (datetime.utcnow() - timedelta(minutes=zoom_minutes + 5)).isoformat()
+
+    conn = _get_db_conn()
+    try:
+        if mode == "mine":
+            cursor = conn.execute(
+                "SELECT id, timestamp, owner, target, username FROM api_key_stats WHERE api_key = ? AND timestamp >= ? ORDER BY id DESC",
+                (api_key, cutoff)
+            )
+        else:
+            cursor = conn.execute(
+                "SELECT id, timestamp, owner, target, username FROM api_key_stats WHERE timestamp >= ? ORDER BY id DESC",
+                (cutoff,)
+            )
+
+        runs = []
+        for row in cursor:
+            runs.append({
+                "id": row[0],
+                "timestamp": row[1],
+                "owner": row[2] or "Registered User",
+                "target": row[3],
+                "username": row[4] or row[2] or "Ramil"
+            })
+
+        # Downsample the runs if there are too many (e.g. more than 1000) to keep it lightweight and super fast!
+        if len(runs) > 1000:
+            step = len(runs) // 1000
+            runs = runs[::step]
+
+        runs.reverse() # Sort chronologically ascending for charts
+
+        # Filter snapshots based on mode and cutoff time
+        filtered_snaps = [
+            s for s in _queue_snapshots 
+            if (mode == "all" or s["api_key"] == api_key) and s["timestamp"] >= cutoff
+        ]
+
+        return {"runs": runs, "snapshots": filtered_snaps}
+    except Exception as e:
+        raise HTTPException(500, f"Database error: {e}")
+    finally:
+        conn.close()
+
+
 @app.get("/api/visits")
 def visits():
     return get_visits_summary()
@@ -870,6 +946,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
     api_key = key_info["key"]
     _queued_count += 1
     _key_queued_counts[api_key] = _key_queued_counts.get(api_key, 0) + 1
+    _add_queue_snapshot(api_key)
     
     queued_decremented = False
     evaluating_incremented = False
@@ -883,6 +960,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
             _evaluating_count += 1
             _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 1
             evaluating_incremented = True
+            _add_queue_snapshot(api_key)
             
             if req.mock:
                 # Simulate a 5-second analysis
@@ -920,6 +998,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
         if evaluating_incremented:
             _evaluating_count -= 1
             _key_evaluating_counts[api_key] = max(0, _key_evaluating_counts.get(api_key, 0) - 1)
+        _add_queue_snapshot(api_key)
 
     # Build secure plain-text manifest file content (fully detailed, including all verdicts/rationales!)
     ts_str = datetime.utcnow().isoformat()

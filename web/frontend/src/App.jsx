@@ -409,7 +409,7 @@ function UsagePage() {
   async function fetchMonitoring() {
     if (!apiKey.trim()) return
     try {
-      const res = await fetch(`/api/monitoring?api_key=${encodeURIComponent(apiKey)}&mode=${mode}`)
+      const res = await fetch(`/api/monitoring?api_key=${encodeURIComponent(apiKey)}&mode=${mode}&zoom_minutes=${zoomMinutes}`)
       if (res.ok) {
         const data = await res.json()
         setRuns(data.runs || [])
