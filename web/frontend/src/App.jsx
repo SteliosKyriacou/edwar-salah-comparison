@@ -8,6 +8,9 @@ import StructuralFlags from './components/StructuralFlags'
 import LoadingCountdown from './components/LoadingCountdown'
 import FdaResponse from './components/FdaResponse'
 import WebSearchSummary from './components/WebSearchSummary'
+import DeepAnalysisReport from './components/DeepAnalysisReport'
+
+const DEEP_SIMULATIONS = 100
 
 export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('alphaforge_api_key') || '')
@@ -16,7 +19,10 @@ export default function App() {
   const [isQueued, setIsQueued] = useState(false)
   const [isPrinting, setIsPrinting] = useState(false)
   const [error, setError] = useState(null)
+  const [deepJob, setDeepJob] = useState(null)
+  const [deepLoading, setDeepLoading] = useState(false)
   const resultsRef = useRef(null)
+  const deepRef = useRef(null)
 
   function handlePrint() {
     setIsPrinting(true)
@@ -59,11 +65,57 @@ export default function App() {
     return <VerifyPage />
   }
 
+  async function handleDeepSubmit(formData) {
+    setDeepLoading(true)
+    setError(null)
+    setResult(null)
+    setDeepJob(null)
+
+    try {
+      const res = await fetch('/api/deep-analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({ ...formData, n_simulations: DEEP_SIMULATIONS }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Deep analysis failed to start')
+      }
+
+      const { job_id } = await res.json()
+
+      setTimeout(() => {
+        deepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+
+      // Poll until the job leaves the running state.
+      while (true) {
+        await new Promise((r) => setTimeout(r, 2500))
+        const s = await fetch(
+          `/api/deep-analyze/${job_id}?api_key=${encodeURIComponent(apiKey)}`
+        )
+        if (!s.ok) throw new Error('Lost track of the deep-analysis job')
+        const job = await s.json()
+        setDeepJob(job)
+        if (job.status !== 'running') break
+      }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setDeepLoading(false)
+    }
+  }
+
   async function handleSubmit(formData) {
     setLoading(true)
     setIsQueued(true) // assume starting in queue state if server has any load
     setError(null)
     setResult(null)
+    setDeepJob(null)
 
     try {
       const res = await fetch('/api/analyze', {
@@ -115,11 +167,34 @@ export default function App() {
           </a>
         </div>
 
-        <InputForm onSubmit={handleSubmit} loading={loading} />
+        <InputForm
+          onSubmit={handleSubmit}
+          onDeepSubmit={handleDeepSubmit}
+          loading={loading}
+          deepLoading={deepLoading}
+          deepSimulations={DEEP_SIMULATIONS}
+        />
 
         {loading && <LoadingCountdown isQueued={isQueued} />}
 
         {error && <div className="error-msg">{error}</div>}
+
+        {(deepLoading || deepJob) && (
+          <div ref={deepRef}>
+            <DeepAnalysisReport
+              job={
+                deepJob || {
+                  status: 'running',
+                  requested: DEEP_SIMULATIONS,
+                  completed: 0,
+                  failed: 0,
+                  errors: [],
+                  report: null,
+                }
+              }
+            />
+          </div>
+        )}
 
         {result && (
           <div ref={resultsRef}>
@@ -360,7 +435,7 @@ export default function App() {
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 16 }}>
                 <strong>3rd-Party Verification Instructions:</strong> This evaluation carries an unforgeable digital certificate signed by DigiCert's Trusted Time-Stamp Authority (TSA) in compliance with the RFC 3161 standard. To verify that this assessment is authentic, has not been modified, and was certified on this exact date:
                 <ol style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <li>Visit the public AlphaForge Verification Portal at: <strong style={{ color: 'var(--accent-blue)' }}>http://136.119.133.178:4003/verify</strong> and enter the SHA-256 fingerprint shown above. This will instantly query the immutable server logs to verify all assessment details.</li>
+                  <li>Visit the public AlphaForge Verification Portal at: <strong style={{ color: 'var(--accent-blue)' }}>{window.location.origin}/verify</strong> and enter the SHA-256 fingerprint shown above. This will instantly query the immutable server logs to verify all assessment details.</li>
                   <li>Alternatively, click <strong>Download Manifest</strong> and <strong>Download TSR Signature</strong>, and audit them together using this OpenSSL command:
                     <code style={{ display: 'block', margin: '4px 0', background: 'rgba(0,0,0,0.2)', padding: '4px 8px', borderRadius: 0, fontFamily: 'monospace', fontSize: '0.73rem', wordBreak: 'break-all' }}>
                       openssl ts -verify -data AlphaForge_Prediction_Manifest.txt -in AlphaForge_TSA_Certificate.tsr -CAfile /etc/ssl/cert.pem

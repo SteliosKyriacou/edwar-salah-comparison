@@ -876,6 +876,29 @@ body {
     display: none !important;
   }
 
+  /* Chart colours are re-stepped for the white print surface. The dark-theme
+     brand blue/orange only reach 2.75:1 and 2.33:1 on white; these steps clear
+     3:1 and pass every CVD separation gate, so printed charts stay legible. */
+  :root {
+    --chart-bar: #2a78d6;
+    --chart-ref: #c25400;
+    --chart-good: #0a7d0a;
+    --chart-warning: #8a5a00;
+    --chart-serious: #b4491c;
+    --chart-critical: #b32626;
+  }
+
+  .deep-card {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #000 !important;
+    page-break-inside: avoid !important;
+  }
+
+  .deep-card svg text {
+    fill: #333 !important;
+  }
+
   /* Force light-background for perfect ink/PDF printing */
   body {
     background: #fff !important;

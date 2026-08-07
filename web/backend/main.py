@@ -9,9 +9,12 @@ import os
 import time
 import math
 import json
+import uuid
+import hashlib
 from datetime import datetime
 
 from agents import run_pipeline
+from deep_analysis import aggregate as deep_aggregate
 from logger import log_prediction
 from visits import log_visit, get_visits_summary
 
@@ -123,6 +126,24 @@ _queued_count = 0
 _key_evaluating_counts = {}  # { api_key: count }
 _key_queued_counts = {}      # { api_key: count }
 
+# --- Deep analysis ---------------------------------------------------------
+# How many simulations one deep analysis runs by default.
+DEEP_DEFAULT_SIMULATIONS = 100
+DEEP_MAX_SIMULATIONS = 200
+
+# How many of those simulations may be in flight at once. Each simulation is a
+# full pipeline run (5 Gemini calls) plus a DigiCert TSA round-trip, so this is
+# deliberately far below the global concurrency_limit — that limit is 5000 in
+# config.json and every API key has rate_limit -1, so nothing else throttles a
+# deep run away from exhausting the Vertex quota.
+DEEP_FANOUT = int(os.environ.get("ALPHAFORGE_DEEP_FANOUT", "10"))
+
+# job_id -> job state. In-memory by design: a deep run is a foreground activity
+# and every individual simulation is already persisted in SQLite, so the
+# aggregate can be recomputed from the database if a job record is lost.
+_deep_jobs = {}
+DEEP_JOB_RETENTION = 20
+
 
 def _authenticate_and_rate_limit(request: Request) -> dict:
     """Authenticate request using X-API-Key header or query parameter.
@@ -219,6 +240,16 @@ class AnalyzeRequest(BaseModel):
     auxiliary: str = ""
     web_search: bool = False
     mock: bool = False
+
+
+class DeepAnalyzeRequest(AnalyzeRequest):
+    """Deep analysis — N repeated simulations of the same molecule.
+
+    n_simulations defaults to 100. Each simulation is a normal prediction: it is
+    manifested, RFC 3161 timestamped and written to the database, so deep runs
+    appear in monitoring and are individually verifiable via /verify.
+    """
+    n_simulations: int = DEEP_DEFAULT_SIMULATIONS
 
 
 @app.get("/api/health")
@@ -838,26 +869,34 @@ def dashboard():
     return DASHBOARD_HTML
 
 
-@app.post("/api/analyze")
-async def analyze(req: AnalyzeRequest, request: Request):
+async def _execute_prediction(
+    key_info: dict,
+    smiles: str,
+    target: str,
+    indication: str,
+    auxiliary: str = "",
+    web_search: bool = False,
+    mock: bool = False,
+    ip: str = "",
+    ua: str = "",
+    path_label: str = "/api/analyze",
+) -> dict:
+    """Run one complete prediction: pipeline -> manifest -> DigiCert TSA -> DB log.
+
+    Shared by /api/analyze and /api/deep-analyze so that every deep-analysis
+    simulation is timestamped, fingerprinted and tracked exactly like a normal
+    single prediction (and therefore shows up in monitoring and /verify).
+
+    Maintains the queued/evaluating counters the dashboard reads, with the same
+    cancellation safety as the original endpoint.
+    """
     global _evaluating_count, _queued_count
-    # Authenticate and rate limit via API Key
-    key_info = _authenticate_and_rate_limit(request)
-
-    ip = _get_client_ip(request)
-
-    if not req.smiles.strip():
-        raise HTTPException(400, "SMILES is required")
-    if not req.target.strip():
-        raise HTTPException(400, "Target is required")
-    if not req.indication.strip():
-        raise HTTPException(400, "Indication is required")
 
     # Tracking queued and evaluating states with cancellation safety
     api_key = key_info["key"]
     _queued_count += 1
     _key_queued_counts[api_key] = _key_queued_counts.get(api_key, 0) + 1
-    
+
     queued_decremented = False
     evaluating_incremented = False
     try:
@@ -866,12 +905,12 @@ async def analyze(req: AnalyzeRequest, request: Request):
             _queued_count -= 1
             _key_queued_counts[api_key] = max(0, _key_queued_counts.get(api_key, 0) - 1)
             queued_decremented = True
-            
+
             _evaluating_count += 1
             _key_evaluating_counts[api_key] = _key_evaluating_counts.get(api_key, 0) + 1
             evaluating_incremented = True
-            
-            if req.mock:
+
+            if mock:
                 # Simulate a 5-second analysis
                 await asyncio.sleep(5)
                 result = {
@@ -893,11 +932,11 @@ async def analyze(req: AnalyzeRequest, request: Request):
                 # Run the CPU/network-bound pipeline in a threadpool
                 result = await asyncio.to_thread(
                     run_pipeline,
-                    req.smiles.strip(),
-                    req.target.strip(),
-                    req.indication.strip(),
-                    req.auxiliary.strip(),
-                    web_search=req.web_search,
+                    smiles.strip(),
+                    target.strip(),
+                    indication.strip(),
+                    auxiliary.strip(),
+                    web_search=web_search,
                 )
     finally:
         # Robust cleanup that handles ALL cancellations and edge cases
@@ -912,18 +951,21 @@ async def analyze(req: AnalyzeRequest, request: Request):
     ts_str = datetime.utcnow().isoformat()
     tsa_manifest = _build_complete_manifest(
         key_info["owner"],
-        req.smiles,
-        req.target,
-        req.indication,
+        smiles,
+        target,
+        indication,
         ts_str,
         result
     )
 
-    import hashlib
     tsa_fingerprint = hashlib.sha256(tsa_manifest.encode("utf-8")).hexdigest()
 
-    # Make the actual DigiCert trusted timestamp request on the plain-text manifest
-    tsa_signature_b64 = _get_rfc3161_timestamp(tsa_manifest.encode("utf-8"))
+    # Make the actual DigiCert trusted timestamp request on the plain-text manifest.
+    # Off-loaded to a thread: it is a blocking HTTP call, and deep analysis fires
+    # many of these concurrently, so it must not stall the event loop.
+    tsa_signature_b64 = await asyncio.to_thread(
+        _get_rfc3161_timestamp, tsa_manifest.encode("utf-8")
+    )
 
     # Append TSA verification fields to result response
     result["tsa_fingerprint"] = tsa_fingerprint
@@ -932,24 +974,185 @@ async def analyze(req: AnalyzeRequest, request: Request):
     result["tsa_manifest"] = tsa_manifest
 
     # Record successful usage
-    _record_key_usage(key_info["key"], key_info["rate_limit"])
-    _log_api_key_stats(
-        key_info["key"],
-        req.smiles,
-        req.target,
-        req.indication,
+    _record_key_usage(api_key, key_info["rate_limit"])
+    await asyncio.to_thread(
+        _log_api_key_stats,
+        api_key,
+        smiles,
+        target,
+        indication,
         owner=key_info["owner"],
         tsa_fingerprint=tsa_fingerprint,
         tsa_timestamp=ts_str,
         tsa_signature_b64=tsa_signature_b64,
         tsa_manifest=tsa_manifest,
-        prediction_json=result
+        prediction_json=result,
     )
 
-    ua = request.headers.get("user-agent", "")
-    log_visit(ip, f"/api/analyze?owner={key_info['owner']}", ua)
+    log_visit(ip, f"{path_label}?owner={key_info['owner']}", ua)
     log_prediction(result)
     return result
+
+
+def _validate_analyze_inputs(req) -> None:
+    if not req.smiles.strip():
+        raise HTTPException(400, "SMILES is required")
+    if not req.target.strip():
+        raise HTTPException(400, "Target is required")
+    if not req.indication.strip():
+        raise HTTPException(400, "Indication is required")
+
+
+@app.post("/api/analyze")
+async def analyze(req: AnalyzeRequest, request: Request):
+    # Authenticate and rate limit via API Key
+    key_info = _authenticate_and_rate_limit(request)
+
+    ip = _get_client_ip(request)
+    _validate_analyze_inputs(req)
+
+    return await _execute_prediction(
+        key_info,
+        req.smiles,
+        req.target,
+        req.indication,
+        auxiliary=req.auxiliary,
+        web_search=req.web_search,
+        mock=req.mock,
+        ip=ip,
+        ua=request.headers.get("user-agent", ""),
+        path_label="/api/analyze",
+    )
+
+
+def _prune_deep_jobs():
+    """Keep only the most recent DEEP_JOB_RETENTION jobs to bound memory."""
+    if len(_deep_jobs) <= DEEP_JOB_RETENTION:
+        return
+    ordered = sorted(_deep_jobs.items(), key=lambda kv: kv[1].get("started_at", ""))
+    for job_id, _ in ordered[: len(_deep_jobs) - DEEP_JOB_RETENTION]:
+        _deep_jobs.pop(job_id, None)
+
+
+async def _run_deep_job(job_id: str, key_info: dict, req: "DeepAnalyzeRequest", ip: str, ua: str):
+    """Execute N simulations with bounded fan-out, aggregating as they land."""
+    job = _deep_jobs[job_id]
+    gate = asyncio.Semaphore(DEEP_FANOUT)
+    results = []
+
+    async def one(index: int):
+        async with gate:
+            if job["status"] == "cancelled":
+                return None
+            try:
+                r = await _execute_prediction(
+                    key_info,
+                    req.smiles,
+                    req.target,
+                    req.indication,
+                    auxiliary=req.auxiliary,
+                    web_search=req.web_search,
+                    mock=req.mock,
+                    ip=ip,
+                    ua=ua,
+                    path_label="/api/deep-analyze",
+                )
+                job["completed"] += 1
+                return r
+            except Exception as e:
+                job["failed"] += 1
+                # Keep only the first few messages — 100 copies of the same
+                # quota error is not useful diagnostics.
+                if len(job["errors"]) < 5:
+                    job["errors"].append(str(e))
+                return None
+
+    try:
+        gathered = await asyncio.gather(
+            *[one(i) for i in range(req.n_simulations)], return_exceptions=True
+        )
+        results = [r for r in gathered if r and not isinstance(r, Exception)]
+
+        job["report"] = await asyncio.to_thread(
+            deep_aggregate, results, req.n_simulations
+        )
+        job["status"] = "cancelled" if job["status"] == "cancelled" else "done"
+    except Exception as e:
+        job["status"] = "error"
+        job["errors"].append(str(e))
+    finally:
+        job["finished_at"] = datetime.utcnow().isoformat()
+
+
+@app.post("/api/deep-analyze")
+async def deep_analyze(req: DeepAnalyzeRequest, request: Request):
+    """Kick off a deep analysis and return a job id immediately.
+
+    N simulations cannot finish inside one HTTP request, so the client polls
+    GET /api/deep-analyze/{job_id} for progress and the final report.
+    """
+    key_info = _authenticate_and_rate_limit(request)
+    ip = _get_client_ip(request)
+    _validate_analyze_inputs(req)
+
+    n = req.n_simulations
+    if n < 2:
+        raise HTTPException(400, "Deep analysis needs at least 2 simulations.")
+    if n > DEEP_MAX_SIMULATIONS:
+        raise HTTPException(
+            400, f"Deep analysis is capped at {DEEP_MAX_SIMULATIONS} simulations."
+        )
+
+    job_id = uuid.uuid4().hex
+    _deep_jobs[job_id] = {
+        "job_id": job_id,
+        "status": "running",
+        "owner": key_info["owner"],
+        "requested": n,
+        "completed": 0,
+        "failed": 0,
+        "errors": [],
+        "report": None,
+        "smiles": req.smiles.strip(),
+        "target": req.target.strip(),
+        "indication": req.indication.strip(),
+        "started_at": datetime.utcnow().isoformat(),
+        "finished_at": None,
+    }
+    _prune_deep_jobs()
+
+    asyncio.create_task(
+        _run_deep_job(job_id, key_info, req, ip, request.headers.get("user-agent", ""))
+    )
+
+    return {
+        "job_id": job_id,
+        "status": "running",
+        "requested": n,
+        "fanout": DEEP_FANOUT,
+    }
+
+
+@app.get("/api/deep-analyze/{job_id}")
+def deep_analyze_status(job_id: str, request: Request):
+    """Progress + final report for a deep-analysis job."""
+    _authenticate_and_rate_limit(request)
+    job = _deep_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Unknown or expired deep-analysis job.")
+    return job
+
+
+@app.post("/api/deep-analyze/{job_id}/cancel")
+def deep_analyze_cancel(job_id: str, request: Request):
+    """Stop launching further simulations for a running job."""
+    _authenticate_and_rate_limit(request)
+    job = _deep_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Unknown or expired deep-analysis job.")
+    if job["status"] == "running":
+        job["status"] = "cancelled"
+    return {"job_id": job_id, "status": job["status"]}
 
 
 DASHBOARD_HTML = """<!DOCTYPE html>

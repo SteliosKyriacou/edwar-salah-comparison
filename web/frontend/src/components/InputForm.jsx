@@ -27,12 +27,14 @@ const EXAMPLES = [
   },
 ]
 
-export default function InputForm({ onSubmit, loading }) {
+export default function InputForm({ onSubmit, onDeepSubmit, loading, deepLoading, deepSimulations = 100 }) {
   const [smiles, setSmiles] = useState('')
   const [target, setTarget] = useState('')
   const [indication, setIndication] = useState('')
   const [auxiliary, setAuxiliary] = useState('')
   const [webSearch, setWebSearch] = useState(false)
+
+  const busy = loading || deepLoading
 
   function handleExample(ex) {
     setSmiles(ex.smiles)
@@ -41,9 +43,30 @@ export default function InputForm({ onSubmit, loading }) {
     setAuxiliary('')
   }
 
+  function fields() {
+    return { smiles, target, indication, auxiliary, web_search: webSearch }
+  }
+
   function handleSubmit(e) {
     e.preventDefault()
-    onSubmit({ smiles, target, indication, auxiliary, web_search: webSearch })
+    onSubmit(fields())
+  }
+
+  function handleDeep() {
+    if (!smiles.trim() || !target.trim() || !indication.trim()) {
+      window.alert('SMILES, Target Class and Indication are all required for deep analysis.')
+      return
+    }
+    const msg =
+      `Run ${deepSimulations} independent simulations of this molecule?\n\n` +
+      `• Each simulation is a full 5-agent pipeline run, individually ` +
+      `timestamped and recorded in the registry.\n` +
+      `• That is roughly ${deepSimulations * 5} model calls, so this takes ` +
+      `several minutes and consumes real quota.\n\n` +
+      `Continue?`
+    if (window.confirm(msg)) {
+      onDeepSubmit(fields())
+    }
   }
 
   return (
@@ -170,9 +193,46 @@ export default function InputForm({ onSubmit, loading }) {
           </div>
         </div>
 
-        <button className="submit-btn" type="submit" disabled={loading}>
-          {loading ? 'Analyzing...' : 'Analyze Molecule'}
-        </button>
+        <div
+          className="full-width"
+          style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'stretch' }}
+        >
+          <button
+            className="submit-btn"
+            type="submit"
+            disabled={busy}
+            style={{ flex: '1 1 260px', margin: 0 }}
+          >
+            {loading ? 'Analyzing...' : 'Analyze Molecule'}
+          </button>
+
+          <button
+            className="submit-btn deep-btn"
+            type="button"
+            onClick={handleDeep}
+            disabled={busy}
+            title={`Run ${deepSimulations} simulations and report the distribution of outcomes`}
+            style={{
+              flex: '1 1 260px',
+              margin: 0,
+              background: 'transparent',
+              color: 'var(--accent-purple)',
+              border: '1px solid var(--accent-purple)',
+            }}
+          >
+            {deepLoading ? 'Running Deep Analysis...' : `🔬 Deep Analysis (${deepSimulations}×)`}
+          </button>
+        </div>
+
+        <div
+          className="full-width"
+          style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: -4 }}
+        >
+          Deep Analysis repeats the same molecule, target and indication{' '}
+          {deepSimulations} times and reports the distribution of CDR scores, per-phase
+          probabilities and how often each risk appears. Every simulation is timestamped and
+          tracked individually, so all {deepSimulations} appear in monitoring and are verifiable.
+        </div>
       </div>
     </form>
   )
