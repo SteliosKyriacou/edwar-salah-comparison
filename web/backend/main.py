@@ -461,13 +461,6 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, 
 
 def _get_api_key_stats(api_key: str) -> dict:
     """Compute statistics and breakdowns for a specific API Key from the SQLite database."""
-    total_predictions = 0
-    unique_smiles = set()
-    unique_targets = set()
-    unique_indications = set()
-    by_indication = {}
-    by_target = {}
-
     if not os.path.exists(DB_FILE):
         return {
             "total_predictions": 0,
@@ -480,33 +473,51 @@ def _get_api_key_stats(api_key: str) -> dict:
 
     conn = _get_db_conn()
     try:
-        cursor = conn.execute("SELECT smiles, target, indication FROM api_key_stats WHERE api_key = ?", (api_key,))
-        for smiles_val, target_val, indication_val in cursor:
-            total_predictions += 1
+        # Get total predictions
+        cursor = conn.execute("SELECT COUNT(*) FROM api_key_stats WHERE api_key = ?", (api_key,))
+        total_predictions = cursor.fetchone()[0] or 0
 
-            smiles = (smiles_val or "").strip()
-            if smiles:
-                unique_smiles.add(smiles)
+        # Get unique molecules
+        cursor = conn.execute("SELECT COUNT(DISTINCT smiles) FROM api_key_stats WHERE api_key = ?", (api_key,))
+        unique_molecules = cursor.fetchone()[0] or 0
 
-            target = (target_val or "").strip()
-            if target:
-                unique_targets.add(target)
-                by_target[target] = by_target.get(target, 0) + 1
+        # Get unique targets
+        cursor = conn.execute("SELECT COUNT(DISTINCT target) FROM api_key_stats WHERE api_key = ?", (api_key,))
+        unique_targets = cursor.fetchone()[0] or 0
 
-            indication = (indication_val or "").strip()
-            if indication:
-                unique_indications.add(indication)
-                by_indication[indication] = by_indication.get(indication, 0) + 1
+        # Get unique indications
+        cursor = conn.execute("SELECT COUNT(DISTINCT indication) FROM api_key_stats WHERE api_key = ?", (api_key,))
+        unique_indications = cursor.fetchone()[0] or 0
+
+        # Get predictions per target
+        cursor = conn.execute(
+            "SELECT target, COUNT(*) FROM api_key_stats WHERE api_key = ? AND target IS NOT NULL AND target != '' GROUP BY target", 
+            (api_key,)
+        )
+        by_target = {row[0].strip(): row[1] for row in cursor}
+
+        # Get predictions per indication
+        cursor = conn.execute(
+            "SELECT indication, COUNT(*) FROM api_key_stats WHERE api_key = ? AND indication IS NOT NULL AND indication != '' GROUP BY indication", 
+            (api_key,)
+        )
+        by_indication = {row[0].strip(): row[1] for row in cursor}
+
     except Exception:
-        pass
+        total_predictions = 0
+        unique_molecules = 0
+        unique_targets = 0
+        unique_indications = 0
+        by_target = {}
+        by_indication = {}
     finally:
         conn.close()
 
     return {
         "total_predictions": total_predictions,
-        "unique_molecules": len(unique_smiles),
-        "unique_targets": len(unique_targets),
-        "unique_indications": len(unique_indications),
+        "unique_molecules": unique_molecules,
+        "unique_targets": unique_targets,
+        "unique_indications": unique_indications,
         "predictions_per_indication": by_indication,
         "predictions_per_target": by_target
     }
