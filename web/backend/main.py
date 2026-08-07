@@ -305,13 +305,26 @@ def _init_db():
                 tsa_timestamp TEXT,
                 tsa_signature_b64 TEXT,
                 tsa_manifest TEXT,
-                prediction_json TEXT
+                prediction_json TEXT,
+                username TEXT
             );
         """)
+        # Additive column migrations. CREATE TABLE IF NOT EXISTS never alters an
+        # existing table, so a column added to the schema above is invisible on
+        # any database created before it. /api/monitoring selects `username`, so
+        # without this the Real-Time Pipeline Monitor fails with
+        # "no such column: username" on every pre-existing database.
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(api_key_stats)")}
+        for column, ddl in (("username", "TEXT"),):
+            if column not in existing:
+                conn.execute(f"ALTER TABLE api_key_stats ADD COLUMN {column} {ddl};")
+
         # Create an index on the fingerprint for O(1) verification lookups
         conn.execute("CREATE INDEX IF NOT EXISTS idx_tsa_fingerprint ON api_key_stats(tsa_fingerprint);")
         # Create an index on api_key for fast stats queries
         conn.execute("CREATE INDEX IF NOT EXISTS idx_api_key ON api_key_stats(api_key);")
+        # /api/monitoring and the stats queries filter and sort on timestamp
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON api_key_stats(timestamp);")
         conn.commit()
     finally:
         conn.close()
