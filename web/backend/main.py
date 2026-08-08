@@ -320,6 +320,11 @@ def _prime_rate_limiter_cache():
 def startup_event():
     _prime_rate_limiter_cache()
 
+    # Bypass Python's default thread-pool cap (typically 20-32) to support up to 5000 concurrent workers
+    from concurrent.futures import ThreadPoolExecutor
+    loop = asyncio.get_running_loop()
+    loop.set_default_executor(ThreadPoolExecutor(max_workers=5000, thread_name_prefix="asyncio_dynamic"))
+
 
 def _build_complete_manifest(owner: str, smiles: str, target: str, indication: str, timestamp: str, result: dict) -> str:
     ov = result.get("overview", {})
