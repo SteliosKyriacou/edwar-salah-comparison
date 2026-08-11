@@ -12,7 +12,7 @@ pkill -9 -f "vite" || true
 sleep 1
 
 echo "Starting backend on :8001..."
-"$DIR/venv/bin/uvicorn" main:app --host 0.0.0.0 --port 8001 \
+/home/stylianos_kyriacou/miniconda3/envs/edwar-salah/bin/uvicorn main:app --host 0.0.0.0 --port 8001 \
   --app-dir "$DIR/backend" &
 BACKEND_PID=$!
 

@@ -234,6 +234,7 @@ class AnalyzeRequest(BaseModel):
     auxiliary: str = ""
     web_search: bool = False
     mock: bool = False
+    retrieve: bool = False
 
 
 @app.get("/api/health")
@@ -273,13 +274,24 @@ def _init_db():
                 tsa_timestamp TEXT,
                 tsa_signature_b64 TEXT,
                 tsa_manifest TEXT,
-                prediction_json TEXT
+                prediction_json TEXT,
+                username TEXT,
+                auxiliary TEXT
             );
         """)
         # Create an index on the fingerprint for O(1) verification lookups
         conn.execute("CREATE INDEX IF NOT EXISTS idx_tsa_fingerprint ON api_key_stats(tsa_fingerprint);")
         # Create an index on api_key for fast stats queries
         conn.execute("CREATE INDEX IF NOT EXISTS idx_api_key ON api_key_stats(api_key);")
+        
+        # Check and dynamically add missing columns for robust schema evolution
+        cursor = conn.execute("PRAGMA table_info(api_key_stats);")
+        columns = [row[1] for row in cursor]
+        if "username" not in columns:
+            conn.execute("ALTER TABLE api_key_stats ADD COLUMN username TEXT;")
+        if "auxiliary" not in columns:
+            conn.execute("ALTER TABLE api_key_stats ADD COLUMN auxiliary TEXT;")
+            
         conn.commit()
     finally:
         conn.close()
@@ -452,7 +464,7 @@ def _get_rfc3161_timestamp(data_to_hash: bytes) -> str:
     return ""
 
 
-def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, owner: str = "", tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = "", tsa_manifest: str = "", prediction_json: dict = None):
+def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, owner: str = "", tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = "", tsa_manifest: str = "", prediction_json: dict = None, auxiliary: str = ""):
     """Log prediction details into the SQLite database."""
     from datetime import datetime
     conn = _get_db_conn()
@@ -462,8 +474,8 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, 
             """
             INSERT INTO api_key_stats (
                 timestamp, api_key, owner, smiles, target, indication, 
-                tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json, username, auxiliary
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.utcnow().isoformat(),
@@ -476,7 +488,9 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, 
                 tsa_timestamp,
                 tsa_signature_b64,
                 tsa_manifest,
-                pred_str
+                pred_str,
+                owner,
+                auxiliary.strip()
             )
         )
         conn.commit()
@@ -947,6 +961,64 @@ async def analyze(req: AnalyzeRequest, request: Request):
     if not req.indication.strip():
         raise HTTPException(400, "Indication is required")
 
+    if req.retrieve:
+        conn = _get_db_conn()
+        try:
+            # Query the database for matching previous evaluations.
+            # If auxiliary is specified in the request, we strictly match it.
+            # Otherwise, we match on smiles, target, and indication.
+            aux_val = req.auxiliary.strip()
+            if aux_val:
+                cursor = conn.execute(
+                    """
+                    SELECT prediction_json FROM api_key_stats 
+                    WHERE LOWER(TRIM(smiles)) = LOWER(TRIM(?))
+                      AND LOWER(TRIM(target)) = LOWER(TRIM(?))
+                      AND LOWER(TRIM(indication)) = LOWER(TRIM(?))
+                      AND LOWER(TRIM(auxiliary)) = LOWER(TRIM(?))
+                    ORDER BY id DESC
+                    """,
+                    (req.smiles, req.target, req.indication, aux_val)
+                )
+            else:
+                cursor = conn.execute(
+                    """
+                    SELECT prediction_json FROM api_key_stats 
+                    WHERE LOWER(TRIM(smiles)) = LOWER(TRIM(?))
+                      AND LOWER(TRIM(target)) = LOWER(TRIM(?))
+                      AND LOWER(TRIM(indication)) = LOWER(TRIM(?))
+                    ORDER BY id DESC
+                    """,
+                    (req.smiles, req.target, req.indication)
+                )
+            
+            import json
+            results = []
+            for row in cursor:
+                if row[0]:
+                    try:
+                        results.append(json.loads(row[0]))
+                    except Exception:
+                        pass
+            
+            if results:
+                # Log retrieve analytic visit
+                ua = request.headers.get("user-agent", "")
+                log_visit(ip, f"/api/analyze/retrieve?owner={key_info['owner']}", ua)
+                
+                return {
+                    "count": len(results),
+                    "results": results
+                }
+            else:
+                raise HTTPException(404, "Previous evaluations not found for the given SMILES, target, and indication.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, f"Database retrieval error: {e}")
+        finally:
+            conn.close()
+
     # Tracking queued and evaluating states with cancellation safety
     api_key = key_info["key"]
     _queued_count += 1
@@ -1040,7 +1112,8 @@ async def analyze(req: AnalyzeRequest, request: Request):
         tsa_timestamp=ts_str,
         tsa_signature_b64=tsa_signature_b64,
         tsa_manifest=tsa_manifest,
-        prediction_json=result
+        prediction_json=result,
+        auxiliary=req.auxiliary
     )
 
     ua = request.headers.get("user-agent", "")
