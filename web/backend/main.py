@@ -11,6 +11,7 @@ import math
 import json
 import uuid
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from agents import run_pipeline
@@ -141,6 +142,21 @@ def _add_queue_snapshot(api_key: str):
     if len(_queue_snapshots) > 2000:
         _queue_snapshots.pop(0)
 
+
+# --- Worker thread pool ----------------------------------------------------
+# THE REAL CONCURRENCY CEILING. Every prediction reaches Vertex through
+# asyncio.to_thread(), which dispatches to the event loop's default executor.
+# That executor defaults to min(32, cpu_count + 4) threads — 20 on a 16-core
+# box — so `concurrency_limit: 5000` never binds: 1000 requests sail past the
+# semaphore and then queue behind 20 threads. Measured, that capped throughput
+# at ~36 predictions/min (20 threads / ~33s per prediction).
+#
+# The work is I/O-bound (waiting on Vertex and DigiCert), so threads can far
+# exceed core count. Note each in-flight prediction issues 5 model calls (4
+# agents in parallel, then the consensus pass), so the Vertex request rate is
+# roughly 5x the prediction rate — raise this and the next wall is the Vertex
+# per-minute quota, not the thread pool.
+THREAD_POOL_SIZE = int(os.environ.get("ALPHAFORGE_THREAD_POOL", "128"))
 
 # --- Deep analysis ---------------------------------------------------------
 # How many simulations one deep analysis runs by default.
@@ -362,7 +378,14 @@ def _prime_rate_limiter_cache():
 
 
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
+    # Replace asyncio's default min(32, cpu+4) executor before serving any
+    # request, so to_thread() work is not bottlenecked by core count.
+    asyncio.get_running_loop().set_default_executor(
+        ThreadPoolExecutor(
+            max_workers=THREAD_POOL_SIZE, thread_name_prefix="alphaforge-worker"
+        )
+    )
     _prime_rate_limiter_cache()
 
 

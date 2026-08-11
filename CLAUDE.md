@@ -90,6 +90,15 @@ It has already gone stale twice in committed code (`34.82.96.124` in the scripts
 **Rate limiting is effectively off.** Every key in `keys.json` carries `rate_limit: -1`, and
 `config.json` sets `concurrency_limit: 5000`. Don't assume throttling protects the Vertex quota.
 
+**`concurrency_limit` is not the real concurrency ceiling.** It resizes the `DynamicSemaphore`,
+but every prediction then reaches Vertex through `asyncio.to_thread()`, so the binding limit is
+the event loop's default executor — `min(32, cpu_count + 4)`, i.e. 20 on a 16-core box. With
+`concurrency_limit: 5000`, 1000 requests pass the semaphore and queue behind those threads;
+measured throughput capped at ~36 predictions/min. `THREAD_POOL_SIZE`
+(`ALPHAFORGE_THREAD_POOL`, default 128) now sizes that executor at startup. Each prediction
+issues 5 model calls, so Vertex request rate is ~5x the prediction rate — past the thread pool,
+the next wall is the Vertex per-minute quota, which returns 429s rather than queueing.
+
 ## Conventions
 
 - Branch for changes; `main` is the default branch. Commit or push only when asked.
