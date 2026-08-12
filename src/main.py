@@ -34,7 +34,7 @@ SALAH_PROMPT = load_agent_prompt("biological-rationalist")
 TOXI_PROMPT = load_agent_prompt("toxi-predictive-toxicologist")
 PHARMA_PROMPT = load_agent_prompt("pharma-clinical-pharmacologist")
 
-llm = ChatGoogleGenerativeAI(model="gemini-3-pro-preview", temperature=0.0)
+llm = ChatGoogleGenerativeAI(model="gemini-3.1-pro-preview", temperature=0.0)
 
 
 def parse_json(content):
