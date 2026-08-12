@@ -1,0 +1,11 @@
+# Backend dependencies. Install into the `edwar-salah` conda env:
+#   conda run -n edwar-salah pip install -r web/backend/requirements.txt
+#
+# Model access is via the Claude Agent SDK, which authenticates through your
+# Claude Code subscription login (the `claude` CLI must be installed and
+# logged in). No ANTHROPIC_API_KEY is used.
+claude-agent-sdk>=0.2.136
+fastapi>=0.115
+uvicorn>=0.32
+python-dotenv>=1.0
+pydantic>=2.0

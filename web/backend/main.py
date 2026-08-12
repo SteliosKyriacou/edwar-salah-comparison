@@ -233,6 +233,7 @@ class AnalyzeRequest(BaseModel):
     indication: str
     auxiliary: str = ""
     web_search: bool = False
+    old_tox: bool = False
     mock: bool = False
     retrieve: bool = False
 
@@ -1066,6 +1067,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
                     req.indication.strip(),
                     req.auxiliary.strip(),
                     web_search=req.web_search,
+                    old_tox=req.old_tox,
                 )
     finally:
         # Robust cleanup that handles ALL cancellations and edge cases

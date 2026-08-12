@@ -1,89 +1,49 @@
 """Web-Search agent — grounds the pipeline in real-world literature.
 
-Uses Gemini with Google Search grounding to find recent publications and
+Uses Claude with its built-in WebSearch tool to find recent publications and
 clinical data relevant to the target/indication/molecule, drafts a concise
 summary with references, then runs a second validation pass that checks every
 claim against the cited sources and strips anything unsupported. The validated
 summary is appended to the auxiliary context fed to the four assessment agents.
+
+Claude cites its sources in the response body rather than in a separate
+grounding-metadata structure, so each search prompt asks for a JSON envelope
+carrying both the prose and its references; URLs seen in the raw WebSearch tool
+results are used as a fallback when the model omits them.
 """
 
-import os
 import json
 from concurrent.futures import ThreadPoolExecutor
-from google import genai
-from google.genai import types
+from urllib.parse import urlparse
 
-MODEL = "gemini-3.1-pro-preview"
+from claude_llm import invoke, invoke_with_search
 
-_client = None
+ANALYST_SYSTEM = (
+    "You are a scientific literature analyst with web search. You MUST call the "
+    "WebSearch tool before writing your answer — run at least two searches, even "
+    "for a molecule or drug you already recognise, because the point of this task "
+    "is current retrieved evidence rather than recall. Ground every claim in a "
+    "source you actually retrieved, and never invent citations, numbers, or drug "
+    "identities. Output only what the requested format asks for — no preamble and "
+    "no commentary."
+)
 
+# Sent on a retry when the first attempt answered without retrieving anything.
+_MUST_SEARCH_NUDGE = (
+    "\n\nYou answered without retrieving any sources. Call the WebSearch tool now "
+    "— at least two distinct queries — and rebuild the answer from what those "
+    "searches return, listing every source you used in \"references\"."
+)
 
-def _get_client():
-    """Lazy Vertex AI client (auth via Application Default Credentials).
-
-    Read project/location lazily so .env (loaded by agents.py) is in effect.
-    """
-    global _client
-    if _client is None:
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT", "ai-pipeline-461818")
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
-        _client = genai.Client(vertexai=True, project=project, location=location)
-    return _client
-
-
-def _extract_references(resp):
-    """Pull deduped {title, uri} references from grounding metadata."""
-    refs = []
-    seen = set()
-    try:
-        for cand in resp.candidates or []:
-            gm = getattr(cand, "grounding_metadata", None)
-            if not gm:
-                continue
-            for chunk in getattr(gm, "grounding_chunks", None) or []:
-                web = getattr(chunk, "web", None)
-                if not web:
-                    continue
-                uri = getattr(web, "uri", "") or ""
-                title = getattr(web, "title", "") or uri
-                if uri and uri not in seen:
-                    seen.add(uri)
-                    refs.append({"title": title, "uri": uri})
-    except Exception:
-        pass
-    return refs
-
-
-def _search(smiles, target, indication, auxiliary=""):
-    """Step 1 — grounded literature search + draft summary."""
-    extra = f"\nAdditional context provided by the user: {auxiliary}" if auxiliary else ""
-    prompt = f"""You are a scientific literature analyst. Using web search, find recent
-publications, clinical trial results, and authoritative data relevant to the
-following drug candidate, then write a concise evidence summary.
-
-Target class: {target}
-Indication: {indication}
-Molecule (SMILES): {smiles}{extra}
-
-Focus on facts that bear on clinical developability:
-- Known clinical or preclinical outcomes for this target/indication or close analogs
-- Reported safety/toxicity liabilities for the target class
-- Pharmacokinetic or chemotype-specific issues documented in the literature
-- Precedent approved drugs or notable clinical failures in this space
-
-Write 150-250 words of plain prose. State only what the sources support, and
-attribute notable claims (e.g. "a 2023 trial reported..."). Do not invent
-citations or numbers. If little relevant literature exists, say so plainly."""
-
-    resp = _get_client().models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.0,
-            tools=[types.Tool(google_search=types.GoogleSearch())],
-        ),
-    )
-    return (resp.text or "").strip(), _extract_references(resp)
+# The validation pass runs with no tools, so its persona must not ask for a
+# search: a denied tool attempt would consume the turn budget before it answers.
+VALIDATOR_SYSTEM = (
+    "You are a meticulous scientific fact-checker working only from the text you "
+    "are given. Do not search the web and do not attempt to open any URL — judge "
+    "the draft against your own domain knowledge and the source titles listed. "
+    "Never add new factual claims or citations. Output only the requested prose, "
+    "with no preamble and no commentary."
+)
 
 
 def _parse_json(text):
@@ -97,6 +57,84 @@ def _parse_json(text):
         return json.loads(clean[start:end])
     except Exception:
         return None
+
+
+def _clean_references(raw_refs, fallback_urls):
+    """Normalise model-declared references to deduped {title, uri} dicts.
+
+    Falls back to URLs harvested from the WebSearch tool results, titled by
+    hostname, when the model returned none of its own.
+    """
+    refs = []
+    seen = set()
+    for ref in raw_refs or []:
+        if not isinstance(ref, dict):
+            continue
+        uri = str(ref.get("uri") or ref.get("url") or "").strip()
+        if not uri or uri in seen:
+            continue
+        seen.add(uri)
+        refs.append({"title": str(ref.get("title") or uri).strip(), "uri": uri})
+    if not refs:
+        # Search results carry far more URLs than the summary actually leans on,
+        # so cap the fallback list at a readable number.
+        for uri in fallback_urls or []:
+            if uri in seen:
+                continue
+            seen.add(uri)
+            refs.append({"title": urlparse(uri).netloc or uri, "uri": uri})
+            if len(refs) >= 10:
+                break
+    return refs
+
+
+def _search(smiles, target, indication, auxiliary=""):
+    """Step 1 — grounded literature search + draft summary."""
+    extra = f"\nAdditional context provided by the user: {auxiliary}" if auxiliary else ""
+    prompt = f"""Using web search, find recent publications, clinical trial results, and
+authoritative data relevant to the following drug candidate, then write a
+concise evidence summary.
+
+Target class: {target}
+Indication: {indication}
+Molecule (SMILES): {smiles}{extra}
+
+Focus on facts that bear on clinical developability:
+- Known clinical or preclinical outcomes for this target/indication or close analogs
+- Reported safety/toxicity liabilities for the target class
+- Pharmacokinetic or chemotype-specific issues documented in the literature
+- Precedent approved drugs or notable clinical failures in this space
+
+Write 150-250 words of plain prose. State only what the sources support, and
+attribute notable claims (e.g. "a 2023 trial reported..."). Do not invent
+citations or numbers. If little relevant literature exists, say so plainly.
+
+Output ONLY a JSON object, no prose outside it:
+{{
+  "summary": "the 150-250 word evidence summary as plain prose",
+  "references": [{{"title": "page or paper title", "uri": "https://..."}}]
+}}
+
+List in "references" only sources you actually retrieved and used."""
+
+    # Claude will sometimes answer a well-known drug from recall instead of
+    # searching, which yields an ungrounded summary with no references. Retry
+    # once with an explicit demand before accepting that.
+    for attempt in range(2):
+        text, urls = invoke_with_search(
+            ANALYST_SYSTEM, prompt if attempt == 0 else prompt + _MUST_SEARCH_NUDGE
+        )
+        data = _parse_json(text)
+        if not data:
+            # Model answered in prose despite the JSON request — keep the prose.
+            summary = (text or "").strip()
+            refs = _clean_references(None, urls)
+        else:
+            summary = str(data.get("summary", "") or "").strip()
+            refs = _clean_references(data.get("references"), urls)
+        if refs:
+            return summary, refs
+    return summary, refs
 
 
 def _fda_status(smiles, target, indication):
@@ -128,7 +166,8 @@ Output ONLY a JSON object, no prose:
       "date": "YYYY or YYYY-MM",
       "title": "short label, e.g. 'Complete Response Letter'",
       "detail": "one sentence"}}
-  ]
+  ],
+  "references": [{{"title": "source title", "uri": "https://..."}}]
 }}
 
 Classification: approvals, positive AdCom votes, and expedited designations are
@@ -136,15 +175,8 @@ Classification: approvals, positive AdCom votes, and expedited designations are
 "negative". If no FDA record can be found, return overall="none" with an empty
 events list. Never fabricate actions, dates, or drug identities."""
 
-    resp = _get_client().models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.0,
-            tools=[types.Tool(google_search=types.GoogleSearch())],
-        ),
-    )
-    data = _parse_json(resp.text)
+    text, urls = invoke_with_search(ANALYST_SYSTEM, prompt)
+    data = _parse_json(text)
     if not data:
         return None
     overall = str(data.get("overall", "none")).lower()
@@ -166,7 +198,7 @@ events list. Never fabricate actions, dates, or drug identities."""
         "overall": overall,
         "headline": str(data.get("headline", "") or ""),
         "events": events,
-        "references": _extract_references(resp),
+        "references": _clean_references(data.get("references"), urls),
     }
 
 
@@ -189,12 +221,7 @@ overstatement, and keep the prose concise (max ~250 words). Do not add new
 factual claims or citations. Output ONLY the validated summary prose, with no
 preamble, headers, or commentary."""
 
-    resp = _get_client().models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(temperature=0.0),
-    )
-    validated = (resp.text or "").strip()
+    validated = (invoke(VALIDATOR_SYSTEM, prompt, max_turns=3) or "").strip()
     return validated or summary
 
 
@@ -225,7 +252,9 @@ def run_web_search(smiles, target, indication, auxiliary=""):
         return {
             "summary": summary,
             "references": references,
-            "validated": True,
+            # Only claim validation when the summary is actually backed by
+            # sources that were retrieved; the UI badges this state directly.
+            "validated": bool(references),
             "fda": fda,
         }
     except Exception as e:

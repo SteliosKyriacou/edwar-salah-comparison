@@ -33,6 +33,7 @@ export default function InputForm({ onSubmit, loading }) {
   const [indication, setIndication] = useState('')
   const [auxiliary, setAuxiliary] = useState('')
   const [webSearch, setWebSearch] = useState(false)
+  const [oldTox, setOldTox] = useState(false)
 
   function handleExample(ex) {
     setSmiles(ex.smiles)
@@ -43,7 +44,7 @@ export default function InputForm({ onSubmit, loading }) {
 
   function handleSubmit(e) {
     e.preventDefault()
-    onSubmit({ smiles, target, indication, auxiliary, web_search: webSearch })
+    onSubmit({ smiles, target, indication, auxiliary, web_search: webSearch, old_tox: oldTox })
   }
 
   return (
@@ -166,6 +167,62 @@ export default function InputForm({ onSubmit, loading }) {
             <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 3 }}>
               When on, the system searches recent publications and clinical data, validates a
               referenced summary, and feeds it to the agents. Adds ~20–30s. Off by default.
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="form-group full-width"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+            padding: '12px 14px',
+            borderRadius: 0,
+            border: '1px solid var(--border)',
+            background: 'var(--bg-secondary)',
+          }}
+        >
+          <button
+            type="button"
+            role="switch"
+            aria-checked={oldTox}
+            aria-label="old-tox"
+            onClick={() => setOldTox((v) => !v)}
+            title="Toggle old-tox (free-form toxicology reporting)"
+            style={{
+              flexShrink: 0,
+              width: 44,
+              height: 24,
+              borderRadius: 0,
+              border: 'none',
+              cursor: 'pointer',
+              padding: 2,
+              background: oldTox ? 'var(--accent-blue)' : 'var(--border)',
+              transition: 'background 0.2s',
+              display: 'flex',
+              justifyContent: oldTox ? 'flex-end' : 'flex-start',
+              alignItems: 'center',
+            }}
+          >
+            <span
+              style={{
+                display: 'block',
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                background: '#fff',
+              }}
+            />
+          </button>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)' }}>
+              🧪 old-tox {oldTox ? 'On' : 'Off'}
+            </div>
+            <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 3 }}>
+              Off by default: the toxicologist must return an explicit PASS/FAIL for all ten
+              organ-system toxicity categories. Turn on to restore the previous free-form
+              toxicology reporting without the mandatory panel.
             </div>
           </div>
         </div>

@@ -84,6 +84,65 @@ export default function AgentCard({
             </div>
           )}
 
+          {Array.isArray(data.tox_panel) && data.tox_panel.length > 0 && (
+            <div className="agent-section">
+              <div className="agent-section-title">
+                Toxicity Panel{' '}
+                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
+                  ({data.tox_panel.filter((t) => t.verdict === 'FAIL').length} FAIL /{' '}
+                  {data.tox_panel.length})
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                {data.tox_panel.map((t) => {
+                  const color =
+                    t.verdict === 'FAIL'
+                      ? 'var(--accent-red)'
+                      : t.verdict === 'PASS'
+                      ? 'var(--accent-green)'
+                      : 'var(--accent-yellow)'
+                  return (
+                    <div
+                      key={t.category}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                        padding: '6px 8px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-secondary)',
+                      }}
+                    >
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          minWidth: 62,
+                          textAlign: 'center',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          padding: '2px 6px',
+                          color: '#fff',
+                          background: color,
+                        }}
+                      >
+                        {t.verdict}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)' }}>
+                          {t.label}
+                        </div>
+                        <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          {t.rationale || t.description}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {isMedchem && data.pass1 && (
             <div className="agent-section">
               <div className="agent-section-title">Structural Assessment</div>

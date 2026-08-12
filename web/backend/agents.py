@@ -3,19 +3,15 @@
 import os
 import json
 import math
+import re
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-from langchain_google_vertexai import ChatVertexAI
-from langchain_core.messages import SystemMessage, HumanMessage
 
+from claude_llm import invoke
 from web_search import run_web_search
 
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 load_dotenv(os.path.join(BASE, ".env"))
-
-# Vertex AI configuration (auth via Application Default Credentials).
-PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "ai-pipeline-461818")
-LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 
 TCSP_CEIL = 0.40
 
@@ -31,11 +27,46 @@ BIO_PROMPT = _load_prompt("biological-rationalist")
 TOXI_PROMPT = _load_prompt("toxi-predictive-toxicologist")
 PHARMA_PROMPT = _load_prompt("pharma-clinical-pharmacologist")
 
-llm = ChatVertexAI(
-    model="gemini-3.1-pro-preview",
-    temperature=0.0,
-    project=PROJECT,
-    location=LOCATION,
+
+# A trailing comma before a closing brace/bracket is the one malformation these
+# agents produce often enough to be worth repairing rather than retrying.
+_TRAILING_COMMA = re.compile(r",(\s*[}\]])")
+
+# Organ-system panel the toxicologist must adjudicate. Appended to the auxiliary
+# context on every run unless the caller sets old_tox, which restores the
+# previous free-form reporting.
+TOX_CATEGORIES = [
+    ("hepatotoxicity", "LiverTox — drug-induced liver injury"),
+    ("cardiotoxicity", "heart failure, arrhythmias, QT prolongation"),
+    ("nephrotoxicity", "kidney injury or failure"),
+    ("neurotoxicity", "seizures, cognitive impairment, nerve damage"),
+    ("hematotoxicity", "blood disorders, anemia, bone marrow suppression"),
+    ("pulmonary_toxicity", "lung inflammation or fibrosis"),
+    ("gastrointestinal_toxicity", "bleeding, perforation, severe inflammation"),
+    ("dermatologic_toxicity", "severe skin reactions such as SJS/TEN"),
+    ("musculoskeletal_toxicity", "tendon rupture, bone density loss"),
+    ("oculotoxicity", "vision loss or retinal damage"),
+]
+
+TOX_PANEL = (
+    "MANDATORY TOXICITY PANEL — the Toxicologist must adjudicate every category "
+    "below and return an explicit PASS or FAIL for each, with a one-sentence "
+    "justification. PASS means no credible mechanism-based or structural liability "
+    "at the expected therapeutic exposure; FAIL means a credible liability exists. "
+    "Judge each category on its own evidence — do not default the whole panel to "
+    "PASS, and do not leave any category out.\n"
+    + "\n".join(f"- {key} ({desc})" for key, desc in TOX_CATEGORIES)
+    + "\n\nInclude this in your JSON output as:\n"
+    '"tox_panel": {"<category>": {"verdict": "PASS" or "FAIL", '
+    '"rationale": "one sentence"}, ...}\n'
+    "covering all ten categories, using exactly the category keys listed above."
+)
+
+# Appended on a retry when the first response would not parse.
+_STRICT_JSON_NUDGE = (
+    "\n\nYour previous response was not valid JSON. Return strict JSON only: "
+    "double-quoted keys and string values, no trailing commas, no comments, and "
+    "no prose or code fences around the object."
 )
 
 
@@ -48,7 +79,61 @@ def parse_json(content):
     clean = content.replace("```json", "").replace("```", "").strip()
     start = clean.find("{")
     end = clean.rfind("}") + 1
-    return json.loads(clean[start:end])
+    if start == -1 or end <= start:
+        raise ValueError(f"no JSON object in response: {clean[:200]!r}")
+    candidate = clean[start:end]
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        return json.loads(_TRAILING_COMMA.sub(r"\1", candidate))
+
+
+def invoke_json(system, msg, attempts=2):
+    """Call an agent and parse its JSON, retrying once with a stricter nudge.
+
+    A single unparseable response would otherwise discard the whole prediction,
+    including the sibling agent calls that already succeeded.
+    """
+    last_error = None
+    for attempt in range(attempts):
+        prompt = msg if attempt == 0 else msg + _STRICT_JSON_NUDGE
+        try:
+            return parse_json(invoke(system, prompt))
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_error = exc
+    raise ValueError(
+        f"agent returned unparseable JSON after {attempts} attempts: {last_error}"
+    )
+
+
+def normalize_tox_panel(raw):
+    """Coerce the agent's tox_panel into a stable shape the UI can rely on.
+
+    Guarantees one entry per category in a fixed order, so a category the agent
+    skipped shows as UNKNOWN rather than silently disappearing.
+    """
+    raw = raw if isinstance(raw, dict) else {}
+    panel = []
+    for key, desc in TOX_CATEGORIES:
+        entry = raw.get(key)
+        if isinstance(entry, dict):
+            verdict = str(entry.get("verdict", "")).strip().upper()
+            rationale = str(entry.get("rationale", "") or "")
+        elif isinstance(entry, str):
+            # Agent answered with a bare "PASS"/"FAIL" instead of an object.
+            verdict, rationale = entry.strip().upper(), ""
+        else:
+            verdict, rationale = "", ""
+        if verdict not in ("PASS", "FAIL"):
+            verdict = "UNKNOWN"
+        panel.append({
+            "category": key,
+            "label": key.replace("_", " ").title(),
+            "description": desc,
+            "verdict": verdict,
+            "rationale": rationale,
+        })
+    return panel
 
 
 def norm_prob(p):
@@ -68,22 +153,19 @@ def tcsp_to_score(tcsp):
 def run_biology(smiles, target, indication, auxiliary=""):
     ctx = f" Additional context: {auxiliary}" if auxiliary else ""
     msg = f"Evaluate the biological feasibility: Target {target}, Indication {indication} for molecule {smiles}.{ctx}"
-    resp = llm.invoke([SystemMessage(content=BIO_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return invoke_json(BIO_PROMPT, msg)
 
 
 def run_toxi(smiles, target, indication, auxiliary=""):
     ctx = f" Additional context: {auxiliary}" if auxiliary else ""
     msg = f"Evaluate the safety liabilities: Target {target}, Indication {indication} for molecule {smiles}.{ctx}"
-    resp = llm.invoke([SystemMessage(content=TOXI_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return invoke_json(TOXI_PROMPT, msg)
 
 
 def run_pharma(smiles, target, indication, auxiliary=""):
     ctx = f" Additional context: {auxiliary}" if auxiliary else ""
     msg = f"Evaluate the PK/PD feasibility: Target {target}, Indication {indication} for molecule {smiles}.{ctx}"
-    resp = llm.invoke([SystemMessage(content=PHARMA_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return invoke_json(PHARMA_PROMPT, msg)
 
 
 def run_medchem_pass1(smiles, target, indication, auxiliary=""):
@@ -95,8 +177,7 @@ Target Class: {target}
 Indication: {indication}{ctx}
 
 Provide your structural critique as Pass 1. Output JSON only."""
-    resp = llm.invoke([SystemMessage(content=MEDCHEM_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return invoke_json(MEDCHEM_PROMPT, msg)
 
 
 def run_medchem_pass2(smiles, target, indication, pass1, bio_data, toxi_data, pharma_data):
@@ -141,15 +222,19 @@ pk_p2={pharma_data.get('pk_p2', 'N/A')} — {pharma_data.get('pk_p2_rationale', 
 pk_p3={pharma_data.get('pk_p3', 'N/A')} — {pharma_data.get('pk_p3_rationale', '')}
 
 TASK: Integrate all advisories with your own Pass 1 assessment. Produce final consensus probabilities (final_p1, final_p2, final_p3). Follow the integration principles. Output Pass 2 JSON only. Do NOT include medchem_score — it is computed server-side."""
-    resp = llm.invoke([SystemMessage(content=MEDCHEM_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return invoke_json(MEDCHEM_PROMPT, msg)
 
 
-def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
+def run_pipeline(smiles, target, indication, auxiliary="", web_search=False,
+                 old_tox=False):
     """Run the full 4-agent AlphaForge pipeline. Returns structured result dict.
 
     If web_search is True, a grounded literature search is run first and its
     validated summary is appended to the auxiliary context fed to every agent.
+
+    By default the mandatory toxicity panel is appended to the auxiliary context,
+    requiring an explicit PASS/FAIL per organ-system category. Setting old_tox
+    restores the previous behaviour, where the toxicologist reports freely.
     """
     web_search_result = None
     if web_search:
@@ -161,6 +246,9 @@ def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
             )
             auxiliary = f"{auxiliary}\n\n{evidence}" if auxiliary else evidence
         web_search_result = ws
+
+    if not old_tox:
+        auxiliary = f"{auxiliary}\n\n{TOX_PANEL}" if auxiliary else TOX_PANEL
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         fut_bio = executor.submit(run_biology, smiles, target, indication, auxiliary)
@@ -239,6 +327,7 @@ def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
             "tox_p1": norm_prob(toxi_data.get("tox_p1")),
             "tox_p2": norm_prob(toxi_data.get("tox_p2")),
             "tox_p3": norm_prob(toxi_data.get("tox_p3")),
+            "tox_panel": [] if old_tox else normalize_tox_panel(toxi_data.get("tox_panel")),
             "tox_p1_rationale": toxi_data.get("tox_p1_rationale", ""),
             "tox_p2_rationale": toxi_data.get("tox_p2_rationale", ""),
             "tox_p3_rationale": toxi_data.get("tox_p3_rationale", ""),
