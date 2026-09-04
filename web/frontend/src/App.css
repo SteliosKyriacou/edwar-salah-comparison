@@ -677,23 +677,6 @@ body {
   }
 }
 
-.calibration-section {
-  max-width: 900px;
-  margin: 48px auto 80px;
-  padding: 0 20px;
-  text-align: center;
-}
-.calibration-subtitle {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  margin-bottom: 20px;
-}
-.calibration-img {
-  width: 100%;
-  max-width: 630px;
-  border-radius: 0;
-  border: 1px solid var(--border);
-}
 
 .disclaimer {
   max-width: 800px;
@@ -869,7 +852,6 @@ body {
   .header,
   .disclaimer,
   .contact-footer,
-  .calibration-section,
   .print-hide,
   button,
   a {

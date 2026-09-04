@@ -3,21 +3,21 @@
     "owner": "Stelios",
     "rate_limit": -1,
     "rate_window": 3600,
-    "admin": true
+    "admin": true,
+    "total_limit": -1
   },
-  "alphaforge_ramil_limit50_7c0e5b128e49d3f1": {
-    "owner": "Ramil",
+  "t": {
+    "owner": "test",
     "rate_limit": -1,
-    "rate_window": 3600
+    "rate_window": 3600,
+    "total_limit": 1,
+    "admin": false
   },
-  "alphaforge_salah_limit100_a3b8d9c24f6e1a72": {
-    "owner": "Salah",
+  "alphaforge_isomorphiclabs_budget10_1c330ad9b4d223ebab1369a1d36ef78f4d0f32071a004757": {
+    "owner": "isomorphiclabs",
     "rate_limit": -1,
-    "rate_window": 3600
-  },
-  "alphaforge_tyson_limit20_d5e1a2f4c8b93d76": {
-    "owner": "Tyson",
-    "rate_limit": -1,
-    "rate_window": 3600
+    "rate_window": 3600,
+    "total_limit": 10,
+    "admin": false
   }
 }

@@ -123,6 +123,10 @@ _queued_count = 0
 _key_evaluating_counts = {}  # { api_key: count }
 _key_queued_counts = {}      # { api_key: count }
 
+# Total lifetime evaluation budget tracking (ticks down once per completed evaluation)
+_key_total_used = {}      # { api_key: lifetime completed evaluations }
+_key_total_reserved = {}  # { api_key: in-flight evaluations holding a budget slot }
+
 _queue_snapshots = []  # list of { timestamp, api_key, evaluating, queued, global_evaluating, global_queued }
 
 def _add_queue_snapshot(api_key: str):
@@ -137,6 +141,60 @@ def _add_queue_snapshot(api_key: str):
     # Limit to last 2000 entries to prevent memory growth
     if len(_queue_snapshots) > 2000:
         _queue_snapshots.pop(0)
+
+
+def _get_total_limit(key_info: dict) -> int:
+    """Total lifetime evaluation budget for a key. -1 (or absent) means unlimited."""
+    try:
+        return int(key_info.get("total_limit", -1))
+    except (TypeError, ValueError):
+        return -1
+
+
+def _total_budget_state(api_key: str, total_limit: int) -> dict:
+    """Reportable view of a key's lifetime budget."""
+    used = _key_total_used.get(api_key, 0)
+    if total_limit < 0:
+        return {"total_limit": -1, "total_used": used, "total_remaining": "unlimited"}
+    reserved = _key_total_reserved.get(api_key, 0)
+    return {
+        "total_limit": total_limit,
+        "total_used": used,
+        "total_remaining": max(0, total_limit - used - reserved),
+    }
+
+
+def _total_budget_exhausted_error(owner: str, used: int, total_limit: int) -> HTTPException:
+    return HTTPException(
+        403,
+        f"Total evaluation budget exhausted for {owner}. "
+        f"{used} of {total_limit} lifetime evaluation{'s' if total_limit != 1 else ''} "
+        f"have been used. Contact an administrator to raise the budget."
+    )
+
+
+def _reserve_total_budget(api_key: str, total_limit: int, owner: str):
+    """Claim one slot from the lifetime budget so concurrent requests cannot overspend it."""
+    if total_limit < 0:
+        return
+    used = _key_total_used.get(api_key, 0)
+    reserved = _key_total_reserved.get(api_key, 0)
+    if used + reserved >= total_limit:
+        raise _total_budget_exhausted_error(owner, used, total_limit)
+    _key_total_reserved[api_key] = reserved + 1
+
+
+def _release_total_reservation(api_key: str, total_limit: int):
+    """Refund a reserved slot when an evaluation does not complete."""
+    if total_limit < 0:
+        return
+    _key_total_reserved[api_key] = max(0, _key_total_reserved.get(api_key, 0) - 1)
+
+
+def _commit_total_usage(api_key: str, total_limit: int):
+    """Consume one evaluation from the lifetime budget after a successful run."""
+    _key_total_used[api_key] = _key_total_used.get(api_key, 0) + 1
+    _release_total_reservation(api_key, total_limit)
 
 
 def _authenticate_and_rate_limit(request: Request) -> dict:
@@ -172,6 +230,13 @@ def _authenticate_and_rate_limit(request: Request) -> dict:
     if rate_limit == 0:
         raise HTTPException(403, f"API Key for {owner} is deactivated or has a zero usage limit.")
 
+    # Check total lifetime evaluation budget (independent of the sliding rate window)
+    total_limit = _get_total_limit(key_info)
+    if total_limit >= 0:
+        total_used = _key_total_used.get(api_key, 0)
+        if total_used >= total_limit:
+            raise _total_budget_exhausted_error(owner, total_used, total_limit)
+
     if rate_limit > 0:
         now = time.time()
         cutoff = now - rate_window
@@ -199,7 +264,8 @@ def _authenticate_and_rate_limit(request: Request) -> dict:
         "key": api_key,
         "owner": owner,
         "rate_limit": rate_limit,
-        "rate_window": rate_window
+        "rate_window": rate_window,
+        "total_limit": total_limit
     }
 
 
@@ -216,6 +282,7 @@ class AdminKeyRequest(BaseModel):
     owner: str
     rate_limit: int = -1
     rate_window: int = 3600
+    total_limit: int = -1   # lifetime evaluation budget; -1 = unlimited
     admin: bool = False
 
 
@@ -328,9 +395,32 @@ def _prime_rate_limiter_cache():
         conn.close()
 
 
+def _prime_total_usage_cache():
+    """Prime lifetime evaluation counts per API key from the log database.
+
+    api_key_stats holds exactly one row per completed evaluation, so it is the
+    durable source of truth for the budget across restarts.
+    """
+    if not os.path.exists(DB_FILE):
+        return
+    conn = _get_db_conn()
+    try:
+        cursor = conn.execute(
+            "SELECT api_key, COUNT(*) FROM api_key_stats WHERE api_key IS NOT NULL GROUP BY api_key"
+        )
+        for api_key, count in cursor:
+            if api_key:
+                _key_total_used[api_key] = count
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
 @app.on_event("startup")
 def startup_event():
     _prime_rate_limiter_cache()
+    _prime_total_usage_cache()
 
     # Bypass Python's default thread-pool cap (typically 20-32) to support up to 5000 concurrent workers
     from concurrent.futures import ThreadPoolExecutor
@@ -587,6 +677,7 @@ def get_usage(request: Request):
     rate_limit = key_info.get("rate_limit", 0)
     rate_window = key_info.get("rate_window", 3600)
     is_admin = key_info.get("admin", False)
+    total_limit = _get_total_limit(key_info)
 
     # Calculate active usage
     usage_count = 0
@@ -614,7 +705,8 @@ def get_usage(request: Request):
         "admin": is_admin,
         "evaluating_now": _key_evaluating_counts.get(api_key, 0),
         "queued_now": _key_queued_counts.get(api_key, 0),
-        "stats": stats
+        "stats": stats,
+        **_total_budget_state(api_key, total_limit)
     }
 
     if is_admin:
@@ -627,7 +719,8 @@ def get_usage(request: Request):
                 "rate_limit": info.get("rate_limit", 0),
                 "rate_window": info.get("rate_window", 3600),
                 "admin": info.get("admin", False),
-                "stats": k_stats
+                "stats": k_stats,
+                **_total_budget_state(k, _get_total_limit(info))
             })
         response_data["all_keys"] = all_keys
 
@@ -670,6 +763,7 @@ def add_or_edit_key(req: AdminKeyRequest, request: Request):
         "owner": req.owner.strip(),
         "rate_limit": req.rate_limit,
         "rate_window": req.rate_window,
+        "total_limit": req.total_limit,
         "admin": req.admin
     }
 
@@ -1021,6 +1115,12 @@ async def analyze(req: AnalyzeRequest, request: Request):
 
     # Tracking queued and evaluating states with cancellation safety
     api_key = key_info["key"]
+    total_limit = key_info["total_limit"]
+
+    # Claim a lifetime budget slot up front so concurrent requests cannot overspend it.
+    # Cached retrieves above never reach here, so they do not consume budget.
+    _reserve_total_budget(api_key, total_limit, key_info["owner"])
+
     _queued_count += 1
     _key_queued_counts[api_key] = _key_queued_counts.get(api_key, 0) + 1
     _add_queue_snapshot(api_key)
@@ -1067,6 +1167,10 @@ async def analyze(req: AnalyzeRequest, request: Request):
                     req.auxiliary.strip(),
                     web_search=req.web_search,
                 )
+    except BaseException:
+        # Covers pipeline errors and client disconnects (CancelledError)
+        _release_total_reservation(api_key, total_limit)
+        raise
     finally:
         # Robust cleanup that handles ALL cancellations and edge cases
         if not queued_decremented:
@@ -1102,6 +1206,7 @@ async def analyze(req: AnalyzeRequest, request: Request):
 
     # Record successful usage
     _record_key_usage(key_info["key"], key_info["rate_limit"])
+    _commit_total_usage(api_key, total_limit)
     _log_api_key_stats(
         key_info["key"],
         req.smiles,
