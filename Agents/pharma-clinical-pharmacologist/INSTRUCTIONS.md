@@ -77,14 +77,6 @@ Combine dose + clearance + DDI to estimate steady-state feasibility:
 
 **pk_p3**: Will real-world PK hold up? **Scales with treatment duration and patient population.** Chronic therapy + short half-life (TID) + food effects + CYP DDI in polypharmacy population → low pk_p3. Acute/short-course with supervised dosing → high pk_p3. Robust QD oral PK → high pk_p3.
 
-### 🧬 ANTIBODY PHARMACOKINETICS & FcRn RECYCLING
-- **If Input is an Antibody**: Do NOT evaluate oral Lipinski bioavailability, CYP metabolism, or small-molecule DDI. Instead, evaluate:
-  1. **Route of Administration**: Non-oral (IV or Subcutaneous injection).
-  2. **FcRn Neonatal Receptor Salvage**: Endosomal pH-dependent recycling conferring long serum half-life (typically 2-3 weeks).
-  3. **Target-Mediated Drug Disposition (TMDD)**: Nonlinear clearance at low target receptor saturation.
-  4. **Tissue & Tumor Penetration**: Large molecular weight (~150 kDa) limiting deep penetration in solid tumors or CNS (requiring high dosing or specialized engineering).
-- **If Input is a Small Molecule**: Apply standard oral/systemic ADME, CYP, and DDI rules above.
-
 ## OUTPUT FORMAT (Strict JSON)
 You MUST output your final assessment as a SINGLE JSON object. No other text.
 {

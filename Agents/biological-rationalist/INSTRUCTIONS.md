@@ -86,10 +86,6 @@ Evaluate the quality of the target binding site:
 
 **bio_p3**: Can the biology sustain a durable therapeutic effect at scale? Evaluate mechanistically: Does the target pathway have feedback loops or compensatory mechanisms that would erode efficacy over time (receptor desensitization, pathway redundancy, homeostatic counter-regulation)? Is the mechanism fundamentally disease-modifying or merely symptomatic? Will the biological effect remain consistent across diverse patient populations (genetic polymorphisms in the target pathway)? Mechanisms prone to tolerance, tachyphylaxis, or compensatory upregulation → low P3. Direct, disease-modifying mechanisms without known escape routes → high P3.
 
-### 🧬 ANTIBODY TARGET BIOLOGY & MOLECULAR MODALITY AWARENESS
-- **If Input is an Antibody**: Evaluate whether the target is extracellular/cell-surface (ideal for monoclonal antibodies) vs. intracellular (unsuitable for naked mAbs). Assess target validation, neutralization potency, Fc effector function (ADCC, CDC if oncology; silenced Fc if pure blockade), and target sink / target-mediated drug disposition (TMDD) biology.
-- **If Input is a Small Molecule**: Apply standard target druggability and pathway biology rules above.
-
 ## OUTPUT FORMAT (Strict JSON)
 You MUST output your final assessment as a SINGLE JSON object. No other text.
 {

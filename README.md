@@ -55,8 +55,8 @@ The Python backend hashes the manifest into a **SHA-256 fingerprint** and sends 
 Ensure you have Python 3.11 and Node.js configured on your server, then install dependencies:
 ```bash
 # Install backend dependencies
-conda create -n edwar-salah python=3.11 -y
-conda run -n edwar-salah pip install pandas scikit-learn matplotlib langchain-core langchain-google-vertexai google-genai python-dotenv fastapi uvicorn pydantic
+python3 -m venv web/venv
+web/venv/bin/pip install pandas scikit-learn matplotlib langchain-core langchain-google-vertexai google-genai python-dotenv fastapi uvicorn pydantic
 
 # Install frontend dependencies (Vite + React 18)
 cd web/frontend

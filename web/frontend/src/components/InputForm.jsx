@@ -13,18 +13,6 @@ const EXAMPLES = [
     target: 'g-Secretase inhibitor',
     indication: 'CNS',
   },
-  {
-    label: 'Antibody Success (Trastuzumab)',
-    smiles: '[Monoclonal Antibody: Trastuzumab (Anti-HER2 IgG1)] Heavy chain: EVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSS... Light chain: DIQMTQSPSSLSASVGDRVTITCRASQDVNTAVAWYQQKPGKAPKLLIYSASFLYSGVPSRFSGSRSGTDFTLTISSLQPEDFATYYCQQHYTTPPTFGQGTKVEIKR...',
-    target: 'HER2 Receptor',
-    indication: 'Oncology (Breast Cancer)',
-  },
-  {
-    label: 'Antibody Failure (Bapineuzumab)',
-    smiles: '[Monoclonal Antibody: Bapineuzumab (Anti-Amyloid-beta IgG1)] Heavy chain: EVQLVESGGGLVQPGGSLRLSCAASGFTFSDHYMSWVRQAPGKGLEWVAYISSGGGSTYYPDTVKGRFTISRDNAKNSLYLQMNSLRAEDTAVYYCARYGNYVWYFDVWGQGTLVTVSS... Light chain: DIQMTQSPSSLSASVGDRVTITCRASQSISSYLNWYQQKPGKAPKLLIYAASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQSYSTPYTFGQGTKVEIKR...',
-    target: 'Amyloid-beta',
-    indication: 'Neurology (Alzheimer\'s Disease)',
-  },
 ]
 
 export default function InputForm({ onSubmit, loading }) {
