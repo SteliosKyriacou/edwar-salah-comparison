@@ -9,9 +9,23 @@ import LoadingCountdown from './components/LoadingCountdown'
 import FdaResponse from './components/FdaResponse'
 import WebSearchSummary from './components/WebSearchSummary'
 
+const RESULT_STORAGE_KEY = 'alphaforge_last_result'
+
+// A completed analysis lives only in component state, so a page reload -- from a
+// discarded background tab, or the dev server's HMR client reconnecting -- would
+// otherwise drop a finished result that the server already returned.
+function loadStoredResult() {
+  try {
+    const raw = sessionStorage.getItem(RESULT_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch (e) {
+    return null
+  }
+}
+
 export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('alphaforge_api_key') || '')
-  const [result, setResult] = useState(null)
+  const [result, setResult] = useState(loadStoredResult)
   const [loading, setLoading] = useState(false)
   const [isQueued, setIsQueued] = useState(false)
   const [isPrinting, setIsPrinting] = useState(false)
@@ -50,6 +64,19 @@ export default function App() {
     const interval = setInterval(pollStatus, 1500)
     return () => clearInterval(interval)
   }, [loading, apiKey])
+
+  // Mirror the last completed analysis so it survives a reload of this tab
+  useEffect(() => {
+    try {
+      if (result) {
+        sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(result))
+      } else {
+        sessionStorage.removeItem(RESULT_STORAGE_KEY)
+      }
+    } catch (e) {
+      // Private browsing or a full quota: keep running without persistence
+    }
+  }, [result])
 
   // Router check
   if (window.location.pathname === '/usage') {
