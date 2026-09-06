@@ -5,10 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 4003,
+    port: 4103,
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8101',
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq, req) => {
             const clientIp = req.socket.remoteAddress || ''
@@ -19,7 +19,7 @@ export default defineConfig({
         },
       },
       '/dashboard': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8101',
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq, req) => {
             const clientIp = req.socket.remoteAddress || ''

@@ -42,7 +42,8 @@ To ensure unforgeable, legally binding proof-of-existence:
 *   **Backups:** Local and Google Cloud Storage (GCS) mirroring via `/home/stylianos_kyriacou/repos/edwar-salah-comparison/web/backup.sh`.
 
 ### Operational Commands:
-*   **Start/Restart Web App:** `bash web/restart.sh` (restarts backend on port `8001` and frontend on port `4003`).
+*   **Model Selection:** Every run uses the model picked in the UI's *Evaluation Model* dropdown (default `gemini-3.1-pro-preview`). The catalog lives in `web/backend/models_catalog.py`; all transports go through `web/backend/llm.py`.
+*   **Start/Restart Web App:** `bash web/restart.sh` (restarts backend on port `8101` and frontend on port `4103`).
 *   **Stop Web App:** `bash web/stop.sh` (kills all active `uvicorn` and `vite` processes).
 *   **Trigger GCS Backup:** `bash web/backup.sh` (archives database, keys, and configs, and uploads the `.tar.gz` to `gs://reneu001/timestamps-database-backup/`).
 

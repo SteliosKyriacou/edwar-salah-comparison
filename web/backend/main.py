@@ -1,17 +1,19 @@
 """FastAPI backend — Will Your Drug Succeed in the Clinic?"""
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 import os
+import sys
 import time
 import math
 import json
 from datetime import datetime
 
 from agents import run_pipeline
+from models_catalog import DEFAULT_MODEL_ID, catalog, get_model, is_known
 from logger import log_prediction
 from visits import log_visit, get_visits_summary
 
@@ -299,6 +301,7 @@ class AnalyzeRequest(BaseModel):
     target: str
     indication: str
     auxiliary: str = ""
+    model: str = DEFAULT_MODEL_ID
     web_search: bool = False
     mock: bool = False
     retrieve: bool = False
@@ -307,6 +310,13 @@ class AnalyzeRequest(BaseModel):
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/models")
+def list_models(response: Response):
+    """Selectable models: the pinned ones first, then cheapest to most expensive."""
+    response.headers["Cache-Control"] = "no-store"
+    return {"default": DEFAULT_MODEL_ID, "models": catalog()}
 
 
 import sqlite3
@@ -343,7 +353,9 @@ def _init_db():
                 tsa_manifest TEXT,
                 prediction_json TEXT,
                 username TEXT,
-                auxiliary TEXT
+                auxiliary TEXT,
+                model TEXT,
+                model_label TEXT
             );
         """)
         # Create an index on the fingerprint for O(1) verification lookups
@@ -358,6 +370,10 @@ def _init_db():
             conn.execute("ALTER TABLE api_key_stats ADD COLUMN username TEXT;")
         if "auxiliary" not in columns:
             conn.execute("ALTER TABLE api_key_stats ADD COLUMN auxiliary TEXT;")
+        if "model" not in columns:
+            conn.execute("ALTER TABLE api_key_stats ADD COLUMN model TEXT;")
+        if "model_label" not in columns:
+            conn.execute("ALTER TABLE api_key_stats ADD COLUMN model_label TEXT;")
             
         conn.commit()
     finally:
@@ -452,6 +468,8 @@ def _build_complete_manifest(owner: str, smiles: str, target: str, indication: s
         f"Target Class: {target.strip()}",
         f"Therapeutic Indication: {indication.strip()}",
         f"Certified Timestamp: {timestamp}",
+        f"Evaluation Model: {result.get('model', {}).get('label', 'N/A')} "
+        f"({result.get('model', {}).get('id', 'N/A')})",
         "",
         "Consensus Overview",
         "------------------",
@@ -554,7 +572,7 @@ def _get_rfc3161_timestamp(data_to_hash: bytes) -> str:
     return ""
 
 
-def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, owner: str = "", tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = "", tsa_manifest: str = "", prediction_json: dict = None, auxiliary: str = ""):
+def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, owner: str = "", tsa_fingerprint: str = "", tsa_timestamp: str = "", tsa_signature_b64: str = "", tsa_manifest: str = "", prediction_json: dict = None, auxiliary: str = "", model: str = "", model_label: str = ""):
     """Log prediction details into the SQLite database."""
     from datetime import datetime
     conn = _get_db_conn()
@@ -564,8 +582,9 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, 
             """
             INSERT INTO api_key_stats (
                 timestamp, api_key, owner, smiles, target, indication, 
-                tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json, username, auxiliary
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                tsa_fingerprint, tsa_timestamp, tsa_signature_b64, tsa_manifest, prediction_json, username, auxiliary,
+                model, model_label
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.utcnow().isoformat(),
@@ -580,7 +599,9 @@ def _log_api_key_stats(api_key: str, smiles: str, target: str, indication: str, 
                 tsa_manifest,
                 pred_str,
                 owner,
-                auxiliary.strip()
+                auxiliary.strip(),
+                model,
+                model_label
             )
         )
         conn.commit()
@@ -1054,6 +1075,8 @@ async def analyze(req: AnalyzeRequest, request: Request):
         raise HTTPException(400, "Target is required")
     if not req.indication.strip():
         raise HTTPException(400, "Indication is required")
+    if req.model and not is_known(req.model):
+        raise HTTPException(400, f"Unknown model '{req.model}'")
 
     if req.retrieve:
         conn = _get_db_conn()
@@ -1143,6 +1166,11 @@ async def analyze(req: AnalyzeRequest, request: Request):
                 # Simulate a 5-second analysis
                 await asyncio.sleep(5)
                 result = {
+                    "model": {
+                        "id": get_model(req.model)["id"],
+                        "label": get_model(req.model)["label"],
+                        "family": get_model(req.model)["family"],
+                    },
                     "overview": {
                         "medchem_score": 42,
                         "tcsp": 0.15,
@@ -1166,10 +1194,25 @@ async def analyze(req: AnalyzeRequest, request: Request):
                     req.indication.strip(),
                     req.auxiliary.strip(),
                     web_search=req.web_search,
+                    model=req.model,
                 )
-    except BaseException:
+    except BaseException as exc:
         # Covers pipeline errors and client disconnects (CancelledError)
         _release_total_reservation(api_key, total_limit)
+        # A model-side failure is the caller's problem to act on (retry, or pick
+        # another model), so report it instead of a bare 500.
+        if isinstance(exc, RuntimeError):
+            raise HTTPException(502, str(exc)) from exc
+        # A model that answered with something other than the requested JSON.
+        if isinstance(exc, ValueError):
+            # Log the detail: without it a 502 gives nothing to debug from.
+            print(f"[analyze] {req.model} produced unparseable output: {exc}",
+                  file=sys.stderr, flush=True)
+            raise HTTPException(
+                502,
+                f"{get_model(req.model)['label']} returned a malformed response. "
+                "Try again or pick another model.",
+            ) from exc
         raise
     finally:
         # Robust cleanup that handles ALL cancellations and edge cases
@@ -1218,7 +1261,9 @@ async def analyze(req: AnalyzeRequest, request: Request):
         tsa_signature_b64=tsa_signature_b64,
         tsa_manifest=tsa_manifest,
         prediction_json=result,
-        auxiliary=req.auxiliary
+        auxiliary=req.auxiliary,
+        model=result.get("model", {}).get("id", ""),
+        model_label=result.get("model", {}).get("label", ""),
     )
 
     ua = request.headers.get("user-agent", "")
@@ -1336,6 +1381,10 @@ if os.path.isdir(FRONTEND_DIST):
 
     @app.get("/{full_path:path}")
     def serve_spa(full_path: str):
+        # Unknown API routes are a 404, not the SPA shell: returning HTML to a
+        # fetch() that expects JSON surfaces as an unrelated parse error.
+        if full_path == "api" or full_path.startswith("api/"):
+            raise HTTPException(404, f"No such endpoint: /{full_path}")
         file_path = os.path.join(FRONTEND_DIST, full_path)
         if os.path.isfile(file_path):
             return FileResponse(file_path)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 const EXAMPLES = [
   {
@@ -15,12 +15,79 @@ const EXAMPLES = [
   },
 ]
 
+const MODEL_STORAGE_KEY = 'alphaforge_model'
+
+function money(v) {
+  return `$${v.toFixed(2)}`
+}
+
+// One line per option: whether you could self-host it, what it costs, how much
+// it can read, and how stale it is.
+function optionLabel(m) {
+  const licence = m.open_source ? 'open weights' : 'closed source'
+  return `${m.label} — ${licence} · ${money(m.price_in)} in / ${money(m.price_out)} out per 1M · ${m.context_label} ctx · data freeze ${m.data_freeze} | ~${m.cost_label} per evaluation`
+}
+
 export default function InputForm({ onSubmit, loading }) {
   const [smiles, setSmiles] = useState('')
   const [target, setTarget] = useState('')
   const [indication, setIndication] = useState('')
   const [auxiliary, setAuxiliary] = useState('')
   const [webSearch, setWebSearch] = useState(false)
+  const [models, setModels] = useState([])
+  const [modelsError, setModelsError] = useState(null)
+  const [modelsReload, setModelsReload] = useState(0)
+  const [model, setModel] = useState(localStorage.getItem(MODEL_STORAGE_KEY) || '')
+
+  // Fetched once per mount, but a page left open across a backend restart would
+  // otherwise strand the picker on "Loading models…" forever, so failures retry
+  // with backoff and then surface a Retry control.
+  useEffect(() => {
+    let cancelled = false
+    let timer = null
+    let attempt = 0
+
+    async function loadModels() {
+      try {
+        // no-store + explicit Accept so a stale HTML response for this URL
+        // (cached from before the endpoint existed) can never be replayed.
+        const res = await fetch('/api/models', {
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+        })
+        if (!res.ok) throw new Error(`server returned ${res.status}`)
+        const contentType = res.headers.get('content-type') || ''
+        if (!contentType.includes('application/json')) {
+          throw new Error('server did not return JSON — try a hard reload')
+        }
+        const data = await res.json()
+        if (cancelled) return
+        setModels(data.models || [])
+        setModelsError(null)
+        // Keep a previously chosen model only if the server still offers it.
+        setModel((current) =>
+          (data.models || []).some((m) => m.id === current) ? current : data.default
+        )
+      } catch (e) {
+        if (cancelled) return
+        attempt += 1
+        if (attempt <= 3) {
+          timer = setTimeout(loadModels, 1000 * attempt)
+          return
+        }
+        setModelsError(e.message || 'could not reach the server')
+      }
+    }
+
+    setModelsError(null)
+    loadModels()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [modelsReload])
+
+  const selected = models.find((m) => m.id === model)
 
   function handleExample(ex) {
     setSmiles(ex.smiles)
@@ -31,7 +98,7 @@ export default function InputForm({ onSubmit, loading }) {
 
   function handleSubmit(e) {
     e.preventDefault()
-    onSubmit({ smiles, target, indication, auxiliary, web_search: webSearch })
+    onSubmit({ smiles, target, indication, auxiliary, model, web_search: webSearch })
   }
 
   return (
@@ -93,6 +160,64 @@ export default function InputForm({ onSubmit, loading }) {
             placeholder="e.g. Oncology, Cardiovascular, Neurology"
             required
           />
+        </div>
+
+        <div className="form-group full-width">
+          <label>Evaluation Model</label>
+          <select
+            value={model}
+            onChange={(e) => {
+              setModel(e.target.value)
+              localStorage.setItem(MODEL_STORAGE_KEY, e.target.value)
+            }}
+            disabled={loading || models.length === 0}
+          >
+            {models.length === 0 && (
+              <option value="">
+                {modelsError ? 'Models unavailable' : 'Loading models…'}
+              </option>
+            )}
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {optionLabel(m)}
+              </option>
+            ))}
+          </select>
+          {modelsError && (
+            <div style={{ fontSize: '0.73rem', color: 'var(--accent-red, #ff6b6b)', marginTop: 5 }}>
+              Could not load the model list ({modelsError}).{' '}
+              <button
+                type="button"
+                onClick={() => setModelsReload((n) => n + 1)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: 'var(--accent-blue)',
+                  font: 'inherit',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                Retry
+              </button>
+              . The analysis will run on the server default until then.
+            </div>
+          )}
+          {selected && (
+            <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: 5 }}>
+              {selected.family}
+              {selected.open_source
+                ? ' · Open weights — self-hostable on your own cluster.'
+                : ' · Closed source — API access only.'}
+              {` · ~${selected.cost_label} per evaluation (estimated from a ~13.3k in / ~22.8k out token run)`}
+              {selected.note ? ` · ${selected.note}` : ''}
+              {webSearch && !selected.grounding
+                ? ' · Web search will be grounded by Gemini 3.1 Pro (this model cannot search).'
+                : ''}
+            </div>
+          )}
         </div>
 
         <div className="form-group full-width">

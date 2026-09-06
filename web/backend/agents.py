@@ -3,19 +3,19 @@
 import os
 import json
 import math
+import re
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-from langchain_google_vertexai import ChatVertexAI
-from langchain_core.messages import SystemMessage, HumanMessage
 
+from llm import invoke
+from models_catalog import DEFAULT_MODEL_ID, get_model
 from web_search import run_web_search
 
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 load_dotenv(os.path.join(BASE, ".env"))
 
-# Vertex AI configuration (auth via Application Default Credentials).
-PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "ai-pipeline-461818")
-LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+# Vertex AI auth is via Application Default Credentials; the transports in
+# llm.py read project/location from the environment loaded above.
 
 TCSP_CEIL = 0.40
 
@@ -31,24 +31,67 @@ BIO_PROMPT = _load_prompt("biological-rationalist")
 TOXI_PROMPT = _load_prompt("toxi-predictive-toxicologist")
 PHARMA_PROMPT = _load_prompt("pharma-clinical-pharmacologist")
 
-llm = ChatVertexAI(
-    model="gemini-3.1-pro-preview",
-    temperature=0.0,
-    project=PROJECT,
-    location=LOCATION,
-)
-
-
 def parse_json(content):
     if isinstance(content, list):
         content = "".join(
             str(c.get("text", "")) if isinstance(c, dict) else str(c)
             for c in content
         )
-    clean = content.replace("```json", "").replace("```", "").strip()
-    start = clean.find("{")
-    end = clean.rfind("}") + 1
-    return json.loads(clean[start:end])
+
+    # Open-weight models are looser than Gemini about "JSON only": they wrap the
+    # object in fences, prefix it with a <think> block, or append a sentence
+    # after the closing brace. Strip all three, then take the first *balanced*
+    # object rather than first-brace-to-last-brace, which swallows trailing prose.
+    clean = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL | re.IGNORECASE)
+    clean = re.sub(r"^\s*<think>.*", "", clean, flags=re.DOTALL | re.IGNORECASE)
+    fenced = re.search(r"```(?:json)?\s*(.*?)```", clean, flags=re.DOTALL)
+    if fenced:
+        clean = fenced.group(1)
+    clean = clean.replace("```json", "").replace("```", "").strip()
+
+    candidate = _first_json_object(clean)
+    if candidate is None:
+        raise ValueError(f"no JSON object in model output: {clean[:200]!r}")
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        # Trailing commas are the usual offender from smaller models.
+        repaired = re.sub(r",(\s*[}\]])", r"\1", candidate)
+        return json.loads(repaired)
+
+
+def _first_json_object(text):
+    """Return the first brace-balanced object in `text`, or None.
+
+    Brace counting ignores braces inside strings so that prose in a field value
+    cannot end the object early.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    # Unbalanced: the model was cut off mid-object.
+    return None
 
 
 def norm_prob(p):
@@ -65,28 +108,25 @@ def tcsp_to_score(tcsp):
     return max(1, min(100, score))
 
 
-def run_biology(smiles, target, indication, auxiliary=""):
+def run_biology(smiles, target, indication, auxiliary="", model=DEFAULT_MODEL_ID):
     ctx = f" Additional context: {auxiliary}" if auxiliary else ""
     msg = f"Evaluate the biological feasibility: Target {target}, Indication {indication} for molecule {smiles}.{ctx}"
-    resp = llm.invoke([SystemMessage(content=BIO_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return parse_json(invoke(model, BIO_PROMPT, msg))
 
 
-def run_toxi(smiles, target, indication, auxiliary=""):
+def run_toxi(smiles, target, indication, auxiliary="", model=DEFAULT_MODEL_ID):
     ctx = f" Additional context: {auxiliary}" if auxiliary else ""
     msg = f"Evaluate the safety liabilities: Target {target}, Indication {indication} for molecule {smiles}.{ctx}"
-    resp = llm.invoke([SystemMessage(content=TOXI_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return parse_json(invoke(model, TOXI_PROMPT, msg))
 
 
-def run_pharma(smiles, target, indication, auxiliary=""):
+def run_pharma(smiles, target, indication, auxiliary="", model=DEFAULT_MODEL_ID):
     ctx = f" Additional context: {auxiliary}" if auxiliary else ""
     msg = f"Evaluate the PK/PD feasibility: Target {target}, Indication {indication} for molecule {smiles}.{ctx}"
-    resp = llm.invoke([SystemMessage(content=PHARMA_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return parse_json(invoke(model, PHARMA_PROMPT, msg))
 
 
-def run_medchem_pass1(smiles, target, indication, auxiliary=""):
+def run_medchem_pass1(smiles, target, indication, auxiliary="", model=DEFAULT_MODEL_ID):
     ctx = f"\nAdditional Context: {auxiliary}" if auxiliary else ""
     msg = f"""PASS 1 — Blind Structural Assessment (no advisory data).
 
@@ -95,11 +135,11 @@ Target Class: {target}
 Indication: {indication}{ctx}
 
 Provide your structural critique as Pass 1. Output JSON only."""
-    resp = llm.invoke([SystemMessage(content=MEDCHEM_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return parse_json(invoke(model, MEDCHEM_PROMPT, msg))
 
 
-def run_medchem_pass2(smiles, target, indication, pass1, bio_data, toxi_data, pharma_data):
+def run_medchem_pass2(smiles, target, indication, pass1, bio_data, toxi_data, pharma_data,
+                      model=DEFAULT_MODEL_ID):
     msg = f"""PASS 2 — Advisory Integration.
 
 Molecule SMILES: {smiles}
@@ -141,19 +181,23 @@ pk_p2={pharma_data.get('pk_p2', 'N/A')} — {pharma_data.get('pk_p2_rationale', 
 pk_p3={pharma_data.get('pk_p3', 'N/A')} — {pharma_data.get('pk_p3_rationale', '')}
 
 TASK: Integrate all advisories with your own Pass 1 assessment. Produce final consensus probabilities (final_p1, final_p2, final_p3). Follow the integration principles. Output Pass 2 JSON only. Do NOT include medchem_score — it is computed server-side."""
-    resp = llm.invoke([SystemMessage(content=MEDCHEM_PROMPT), HumanMessage(content=msg)])
-    return parse_json(resp.content)
+    return parse_json(invoke(model, MEDCHEM_PROMPT, msg))
 
 
-def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
+def run_pipeline(smiles, target, indication, auxiliary="", web_search=False,
+                 model=DEFAULT_MODEL_ID):
     """Run the full 4-agent AlphaForge pipeline. Returns structured result dict.
 
-    If web_search is True, a grounded literature search is run first and its
-    validated summary is appended to the auxiliary context fed to every agent.
+    All five agent calls run on `model` (see models_catalog). If web_search is
+    True, a grounded literature search is run first and its validated summary is
+    appended to the auxiliary context fed to every agent.
     """
+    model_info = get_model(model)
+    model = model_info["id"]
+
     web_search_result = None
     if web_search:
-        ws = run_web_search(smiles, target, indication, auxiliary)
+        ws = run_web_search(smiles, target, indication, auxiliary, model=model)
         if ws and ws.get("summary"):
             evidence = (
                 "Validated web-search literature summary (references provided):\n"
@@ -163,10 +207,10 @@ def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
         web_search_result = ws
 
     with ThreadPoolExecutor(max_workers=4) as executor:
-        fut_bio = executor.submit(run_biology, smiles, target, indication, auxiliary)
-        fut_toxi = executor.submit(run_toxi, smiles, target, indication, auxiliary)
-        fut_pharma = executor.submit(run_pharma, smiles, target, indication, auxiliary)
-        fut_pass1 = executor.submit(run_medchem_pass1, smiles, target, indication, auxiliary)
+        fut_bio = executor.submit(run_biology, smiles, target, indication, auxiliary, model)
+        fut_toxi = executor.submit(run_toxi, smiles, target, indication, auxiliary, model)
+        fut_pharma = executor.submit(run_pharma, smiles, target, indication, auxiliary, model)
+        fut_pass1 = executor.submit(run_medchem_pass1, smiles, target, indication, auxiliary, model)
 
         bio_data = fut_bio.result()
         toxi_data = fut_toxi.result()
@@ -174,7 +218,7 @@ def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
         pass1_data = fut_pass1.result()
 
     pass2_data = run_medchem_pass2(
-        smiles, target, indication, pass1_data, bio_data, toxi_data, pharma_data
+        smiles, target, indication, pass1_data, bio_data, toxi_data, pharma_data, model
     )
 
     fp1 = norm_prob(pass2_data.get("final_p1", 0.5))
@@ -184,6 +228,11 @@ def run_pipeline(smiles, target, indication, auxiliary="", web_search=False):
     score = tcsp_to_score(tcsp)
 
     return {
+        "model": {
+            "id": model_info["id"],
+            "label": model_info["label"],
+            "family": model_info["family"],
+        },
         "web_search": web_search_result,
         "overview": {
             "medchem_score": score,

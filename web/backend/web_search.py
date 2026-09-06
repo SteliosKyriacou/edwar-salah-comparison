@@ -13,22 +13,25 @@ from concurrent.futures import ThreadPoolExecutor
 from google import genai
 from google.genai import types
 
-MODEL = "gemini-3.1-pro-preview"
+from models_catalog import DEFAULT_MODEL_ID, get_model
 
-_client = None
-
+# Google Search grounding is a Gemini-only feature, so a run on an open-weight
+# model still grounds through this Gemini model.
+GROUNDING_FALLBACK_MODEL = DEFAULT_MODEL_ID
 
 def _get_client():
-    """Lazy Vertex AI client (auth via Application Default Credentials).
+    """Vertex AI client (auth via Application Default Credentials).
 
-    Read project/location lazily so .env (loaded by agents.py) is in effect.
+    Built per call rather than cached: the search and FDA steps run in worker
+    threads, and a client cached from a thread that has since exited comes back
+    with its transport already closed ("Cannot send a request, as the client has
+    been closed"). Construction is local and cheap.
+
+    Project/location are read lazily so .env (loaded by agents.py) is in effect.
     """
-    global _client
-    if _client is None:
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT", "ai-pipeline-461818")
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
-        _client = genai.Client(vertexai=True, project=project, location=location)
-    return _client
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT", "ai-pipeline-461818")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+    return genai.Client(vertexai=True, project=project, location=location)
 
 
 def _extract_references(resp):
@@ -54,7 +57,17 @@ def _extract_references(resp):
     return refs
 
 
-def _search(smiles, target, indication, auxiliary=""):
+def _grounding_model(model=None):
+    """The model used for the grounded steps: the caller's choice when it can
+    ground, otherwise the Gemini fallback."""
+    if model:
+        info = get_model(model)
+        if info["transport"] == "gemini" and info["grounding"]:
+            return info["id"]
+    return GROUNDING_FALLBACK_MODEL
+
+
+def _search(smiles, target, indication, auxiliary="", model=None):
     """Step 1 — grounded literature search + draft summary."""
     extra = f"\nAdditional context provided by the user: {auxiliary}" if auxiliary else ""
     prompt = f"""You are a scientific literature analyst. Using web search, find recent
@@ -76,7 +89,7 @@ attribute notable claims (e.g. "a 2023 trial reported..."). Do not invent
 citations or numbers. If little relevant literature exists, say so plainly."""
 
     resp = _get_client().models.generate_content(
-        model=MODEL,
+        model=_grounding_model(model),
         contents=prompt,
         config=types.GenerateContentConfig(
             temperature=0.0,
@@ -99,7 +112,7 @@ def _parse_json(text):
         return None
 
 
-def _fda_status(smiles, target, indication):
+def _fda_status(smiles, target, indication, model=None):
     """Find the current U.S. FDA regulatory status and classify its sentiment.
 
     Returns a dict {drug_name, overall, headline, events, references} or None.
@@ -137,7 +150,7 @@ Classification: approvals, positive AdCom votes, and expedited designations are
 events list. Never fabricate actions, dates, or drug identities."""
 
     resp = _get_client().models.generate_content(
-        model=MODEL,
+        model=_grounding_model(model),
         contents=prompt,
         config=types.GenerateContentConfig(
             temperature=0.0,
@@ -170,7 +183,7 @@ events list. Never fabricate actions, dates, or drug identities."""
     }
 
 
-def _validate(summary, references, target, indication):
+def _validate(summary, references, target, indication, model=None):
     """Step 2 — fact-check the draft against its own references."""
     ref_list = "\n".join(f"- {r['title']}: {r['uri']}" for r in references) or "(none)"
     prompt = f"""You are a meticulous fact-checker. Below is a draft evidence summary about a
@@ -190,7 +203,7 @@ factual claims or citations. Output ONLY the validated summary prose, with no
 preamble, headers, or commentary."""
 
     resp = _get_client().models.generate_content(
-        model=MODEL,
+        model=_grounding_model(model),
         contents=prompt,
         config=types.GenerateContentConfig(temperature=0.0),
     )
@@ -198,14 +211,14 @@ preamble, headers, or commentary."""
     return validated or summary
 
 
-def _safe_fda_status(smiles, target, indication):
+def _safe_fda_status(smiles, target, indication, model=None):
     try:
-        return _fda_status(smiles, target, indication)
+        return _fda_status(smiles, target, indication, model)
     except Exception:
         return None
 
 
-def run_web_search(smiles, target, indication, auxiliary=""):
+def run_web_search(smiles, target, indication, auxiliary="", model=None):
     """Run the full web-search agent.
 
     Returns a dict: {summary, references, validated, fda} or None on hard failure.
@@ -215,18 +228,19 @@ def run_web_search(smiles, target, indication, auxiliary=""):
     try:
         # FDA status is independent of the literature draft, so run it concurrently.
         with ThreadPoolExecutor(max_workers=2) as executor:
-            fut_fda = executor.submit(_safe_fda_status, smiles, target, indication)
-            draft, references = _search(smiles, target, indication, auxiliary)
+            fut_fda = executor.submit(_safe_fda_status, smiles, target, indication, model)
+            draft, references = _search(smiles, target, indication, auxiliary, model)
             fda = fut_fda.result()
 
         if not draft:
             return None
-        summary = _validate(draft, references, target, indication)
+        summary = _validate(draft, references, target, indication, model)
         return {
             "summary": summary,
             "references": references,
             "validated": True,
             "fda": fda,
+            "grounding_model": _grounding_model(model),
         }
     except Exception as e:
         return {

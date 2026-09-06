@@ -121,6 +121,7 @@ body {
 }
 
 .form-group input,
+.form-group select,
 .form-group textarea {
   background: #1f1f35;
   border: 1px solid var(--border);
@@ -140,8 +141,28 @@ body {
 }
 
 .form-group input:focus,
+.form-group select:focus,
 .form-group textarea:focus {
   border-color: var(--accent-blue);
+}
+
+.form-group select {
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  /* The option label carries price, context and data-freeze, so give it room. */
+  text-overflow: ellipsis;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+                    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+.form-group select:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .form-group textarea {
